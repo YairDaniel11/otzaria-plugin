@@ -1,0 +1,126 @@
+name: 'Otzaria Plugin Validator & Publisher'
+description: 'Validate an Otzaria plugin against the live SDK reference and publish it to the Otzaria plugin store.'
+author: 'Otzaria'
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
+
+inputs:
+  path:
+    description: >-
+      Path to validate (and, when publishing, to package). A plugin directory
+      (containing manifest.json), a directory of many plugins, a bare
+      manifest.json, or a .otzplugin file. Defaults to the repository root.
+      Publishing requires the path to resolve to exactly one plugin directory.
+    required: false
+    default: '.'
+  fail-on-warnings:
+    description: >-
+      When 'true', warnings fail the run too — matching the store upload, which
+      blocks on warnings. When 'false' (default), only blocking errors fail.
+    required: false
+    default: 'false'
+  app-version:
+    description: >-
+      Optional Otzaria app version. When set, minAppVersion/maxAppVersion are
+      checked against it (blocking). Empty (default) skips the check.
+    required: false
+    default: ''
+  api-reference-url:
+    description: >-
+      Override the URL of the official API_REFERENCE.md fetched in real time.
+      Defaults to Otzaria/otzaria@dev. On fetch failure a built-in fallback is used.
+    required: false
+    default: ''
+  build:
+    description: >-
+      When 'true', always build the .otzplugin and expose the plugin-file /
+      sha256 outputs, even without publishing. Unlike publishing it needs no
+      credentials and runs on pull_request events too, so you can upload the
+      artifact (actions/upload-artifact, a GitHub Release, etc.) in a later step.
+      Default 'false' builds the file only when publishing.
+    required: false
+    default: 'false'
+  publish:
+    description: >-
+      'auto' (default) publishes to the store only when all three otzaria-*
+      secrets are provided; 'true' forces publishing (errors if a secret is
+      missing); 'false' validates only. Publishing is ALWAYS skipped on
+      pull_request events, so never rely on it from fork PRs.
+    required: false
+    default: 'auto'
+  otzaria-user:
+    description: 'Store account email or username (use a secret). Required to publish.'
+    required: false
+    default: ''
+  otzaria-password:
+    description: 'Store account password (use a secret). Required to publish.'
+    required: false
+    default: ''
+  otzaria-plugin-id:
+    description: >-
+      Optional. The store''s internal plugin id. Normally NOT needed — the plugin
+      is identified by the id in its manifest.json (resolved via the store). Set
+      this only to target a specific plugin id explicitly (single plugin only).
+    required: false
+    default: ''
+  screenshots:
+    description: >-
+      Screenshot file paths (comma/newline separated), relative to the plugin
+      directory or repo root. Required only on the FIRST publish of a new plugin
+      (the store mandates at least one screenshot to create a plugin).
+    required: false
+    default: ''
+  description:
+    description: >-
+      Long store description used only when creating a new plugin on first
+      publish. Defaults to the manifest description.
+    required: false
+    default: ''
+  sync-metadata:
+    description: >-
+      When 'true' (default), the plugin''s store fields (name, author, stability,
+      minAppVersion, homepage, network) are updated from manifest.json on publish.
+      Owners always get this server-side; this flag is what makes an ADMIN update
+      sync them too (admins otherwise keep the existing store fields). The long store
+      description and tags are always preserved. Set 'false' to keep store fields as-is.
+    required: false
+    default: 'true'
+  force:
+    description: >-
+      When 'true', publish even if the store already has the manifest version
+      (admins may re-upload the same version). Default 'false' skips a no-op publish.
+    required: false
+    default: 'false'
+  base-url:
+    description: 'Store base URL. Defaults to https://otzaria.org.'
+    required: false
+    default: 'https://otzaria.org'
+  output:
+    description: >-
+      Output .otzplugin filename when publishing. Defaults to
+      {id}-{version}.otzplugin next to the plugin directory.
+    required: false
+    default: ''
+
+outputs:
+  passed:
+    description: "'true' if validation passed, 'false' otherwise."
+  total-plugins:
+    description: 'Number of plugins discovered and validated.'
+  total-errors:
+    description: 'Total blocking errors found across all plugins.'
+  total-warnings:
+    description: 'Total warnings found across all plugins.'
+  published:
+    description: "'true' if an update was pushed to the store."
+  pending-approval:
+    description: "'true' if the pushed update is waiting for admin approval."
+  plugin-file:
+    description: 'Path to the built .otzplugin (when building and/or publishing).'
+  sha256:
+    description: 'SHA-256 of the built .otzplugin (when building and/or publishing).'
+
+runs:
+  using: 'node20'
+  main: 'src/index.js'
