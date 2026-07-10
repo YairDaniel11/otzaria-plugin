@@ -1,26 +1,76 @@
 // =================================================================
-// הגדרות - כל הנתונים שלך כבר מוזנים בפנים!
+// הגדרות - הסודות (טוקנים) נשמרים ב-Script Properties ולא כאן בקוד!
 // =================================================================
-const GITHUB_PERSONAL_ACCESS_TOKEN = 'PASTE_YOUR_GITHUB_TOKEN_HERE';
+// למה? כי Script Properties הן אחסון נפרד מהקוד עצמו - כשמדביקים/מעדכנים
+// את תוכן הסקריפט (למשל דרך clasp push או הדבקה מחדש מהריפו), הן *לא* נמחקות
+// ולא נדרסות. כך שצריך להריץ את setup() פעם אחת בלבד, אף פעם לא שוב.
+//
+// ── הוראות הפעלה חד-פעמית ──
+// 1. מלאו את הערכים במפה SECRETS_TO_SET למטה.
+// 2. בחרו את הפונקציה setup מהתפריט למעלה בעורך ולחצו "הפעלה" (Run) פעם אחת.
+// 3. אחרי שהריצה הצליחה - מחקו את הערכים מתוך SECRETS_TO_SET (אופציונלי,
+//    להגנה נוספת) ותוכלו לעדכן את שאר הקוד בעתיד בלי לחשוש לדריסת הסודות.
+function setup() {
+  const SECRETS_TO_SET = {
+    GITHUB_PERSONAL_ACCESS_TOKEN: 'PASTE_YOUR_GITHUB_TOKEN_HERE',
+    CLOUDINARY_API_SECRET: 'PASTE_YOUR_CLOUDINARY_API_SECRET_HERE',
+    GITHUB_WEBHOOK_SECRET: 'PASTE_YOUR_WEBHOOK_SECRET_HERE'
+  };
+  const props = PropertiesService.getScriptProperties();
+  Object.keys(SECRETS_TO_SET).forEach(key => {
+    const value = SECRETS_TO_SET[key];
+    if (!value || value.startsWith('PASTE_YOUR_')) {
+      console.log(`דילוג על ${key} - לא מולא ערך אמיתי.`);
+      return;
+    }
+    props.setProperty(key, value);
+    console.log(`${key} נשמר בהצלחה ב-Script Properties.`);
+  });
+}
+
+const props_ = PropertiesService.getScriptProperties();
+const GITHUB_PERSONAL_ACCESS_TOKEN = props_.getProperty('GITHUB_PERSONAL_ACCESS_TOKEN');
+const CLOUDINARY_API_SECRET = props_.getProperty('CLOUDINARY_API_SECRET');
+const GITHUB_WEBHOOK_SECRET = props_.getProperty('GITHUB_WEBHOOK_SECRET');
 
 const REPO_OWNER = 'Otzaria';
 const REPO_NAME = 'otzaria';
 
 const CLOUDINARY_CLOUD_NAME = 'dolbpinh6';
 const CLOUDINARY_API_KEY = '329884683897627';
-const CLOUDINARY_API_SECRET = 'PASTE_YOUR_CLOUDINARY_API_SECRET_HERE';
 
 const SPREADSHEET_ID = '1yZjFBMTfq9esrawHGGoKqc-QIabRNWI74NnsManuctE';
 const SHEET_NAME = 'דיווח באגים לאוצריא - התוסף';
 const SENDER_EMAIL = 'otzaria.dev@gmail.com';
+// GITHUB_WEBHOOK_SECRET: טוקן סודי שמזהה בקשות שמגיעות מה-Webhook של גיטהאב (יש להגדיר את אותו הטוקן
+// בכתובת ה-Payload URL של ה-Webhook בגיטהאב, לדוגמה: .../exec?secret=XXXX)
 
 // =================================================================
-// קבלת נתונים ישירות מהתוסף
+// נתיב הכניסה הראשי - מבחין בין דיווח באג חדש מהתוסף לבין Webhook מגיטהאב
 // =================================================================
 function doPost(e) {
   console.log('--- התחלת עיבוד בקשת POST ---');
   try {
     const data = JSON.parse(e.postData.contents);
+
+    // תגובה חדשה על Issue בגיטהאב (Webhook) - להעביר הודעה למדווח המקורי
+    if (data.action && data.comment && data.issue) {
+      return handleGitHubCommentWebhook(e, data);
+    }
+
+    return handleBugReport(data);
+  } catch (error) {
+    console.error('שגיאה כללית בפונקציה doPost: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// =================================================================
+// קבלת דיווח באג ישירות מהתוסף
+// =================================================================
+function handleBugReport(data) {
+  try {
     const userEmail = data.email;
     const username  = data.username;
 
@@ -106,10 +156,70 @@ function doPost(e) {
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (error) {
-    console.error('שגיאה כללית בפונקציה doPost: ' + error.toString());
+    console.error('שגיאה כללית בפונקציה handleBugReport: ' + error.toString());
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// =================================================================
+// Webhook מגיטהאב - תגובה חדשה על Issue מועברת בדוא"ל למדווח המקורי
+// (משתמש ב-MailApp בלבד ולא ב-GmailApp, כדי לא לדרוש הרשאת Gmail הרגישה
+// שגורמת לפגות תוקף האישור מדי כשבוע באפליקציה לא מאומתת)
+// =================================================================
+function handleGitHubCommentWebhook(e, data) {
+  console.log('--- התקבל Webhook מגיטהאב (תגובה על Issue) ---');
+
+  if (!e.parameter || e.parameter.secret !== GITHUB_WEBHOOK_SECRET) {
+    console.error('Webhook נדחה: טוקן סודי חסר או שגוי.');
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'unauthorized' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (data.action !== 'created') {
+    console.log(`אירוע מסוג "${data.action}" - אין צורך לשלוח הודעה.`);
+    return ContentService.createTextOutput(JSON.stringify({ success: true, ignored: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const issueUrl = data.issue.html_url;
+  const commentAuthor = data.comment.user.login;
+  const commentBody = data.comment.body;
+  const commentUrl = data.comment.html_url;
+
+  console.log(`תגובה חדשה מ-${commentAuthor} על: ${issueUrl}`);
+
+  const sheetData = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME).getDataRange().getValues();
+
+  let targetEmail = null;
+  for (let i = 1; i < sheetData.length; i++) {
+    if (sheetData[i][10] === issueUrl && sheetData[i][8]) {
+      targetEmail = sheetData[i][8];
+      break;
+    }
+  }
+
+  if (!targetEmail) {
+    console.log(`[התעלמות] לא נמצאה כתובת אימייל בגיליון עבור: ${issueUrl}`);
+    return ContentService.createTextOutput(JSON.stringify({ success: true, ignored: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const subject = 'עדכון לדיווח שלך באוצריא';
+  const plainBody =
+    `${commentAuthor} הגיב על הדיווח שלך:\n\n` +
+    `${commentBody}\n\n` +
+    `לצפייה ולהמשך התכתבות יש לעבור לגיטהאב:\n${commentUrl}`;
+
+  try {
+    MailApp.sendEmail(targetEmail, subject, plainBody);
+    console.log(`הודעה נשלחה בהצלחה אל ${targetEmail}.`);
+  } catch (err) {
+    console.error(`שגיאה בשליחת המייל אל ${targetEmail}: ${err.toString()}`);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ success: true }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // תגובה ידידותית לגישה ישירה בדפדפן (GET)
@@ -182,87 +292,14 @@ function createGitHubIssue(owner, repo, title, body) {
   }
 }
 
-// =================================================================
-// סריקת אימיילים מתיבת הדואר והעברתם למשתמשים
-// =================================================================
+function testPermissionsInternal() {
+  console.log('בודק הרשאת Sheets...');
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+  console.log(`הרשאת Sheets תקינה. שם הגיליון: ${sheet.getName()}`);
 
-function processGitHubEmails() {
-  console.log('מחפש שרשורי אימייל חדשים מגיטהאב...');
-  
-  const threads = GmailApp.search('from:notifications@github.com is:unread');
-  
-  if (threads.length === 0) {
-    console.log('לא נמצאו אימיילים חדשים שלא נקראו מגיטהאב.');
-    return;
-  }
-
-  const sheetData = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME).getDataRange().getValues();
-
-  threads.forEach(thread => {
-    const messages = thread.getMessages();
-    
-    messages.forEach(message => {
-      if (message.isUnread()) {
-        const subject = message.getSubject();
-        let htmlBody = message.getBody(); 
-        let plainBody = message.getPlainBody(); 
-        const githubReplyTo = message.getReplyTo(); 
-        
-        const urlMatch = plainBody.match(/https:\/\/github\.com\/[^\/]+\/[^\/]+\/issues\/\d+/);
-        
-        if (urlMatch) {
-          const issueUrl = urlMatch[0];
-          console.log(`---> מעבד אימייל עבור ה-Issue: ${issueUrl}`);
-          
-          let targetEmail = null;
-          
-          for (let i = 1; i < sheetData.length; i++) {
-            if (sheetData[i][10] === issueUrl && sheetData[i][8]) {
-              targetEmail = sheetData[i][8];
-              break; 
-            }
-          }
-          
-          if (targetEmail) {
-            console.log(`[נמצאה התאמה] מחליף טקסטים ומעביר את העדכון לכתובת: ${targetEmail}`);
-            
-            const hebrewReplacementHtml = `לתגובה השב על מייל זה או <a href="${issueUrl}">עבור אל גיטהאב</a>`;
-            const hebrewReplacementPlain = `לתגובה השב על מייל זה או עבור אל גיטהאב: ${issueUrl}`;
-            
-            // 1. החלפת שורה ראשונה (מטפל בצורה חכמה בתגיות ה-HTML של הקישורים)
-            htmlBody = htmlBody.replace(/Reply to this email directly, <a [^>]+>view it on GitHub<\/a>, or <a [^>]+>unsubscribe<\/a>\.?/gi, hebrewReplacementHtml);
-            plainBody = plainBody.replace("Reply to this email directly, view it on GitHub, or unsubscribe.", hebrewReplacementPlain);
-            
-            // 2. הסרת שורת הפרסומת לאפליקציה (השורה השנייה) - תופס את כל הבלוק כולל הקישורים שבתוכו
-            htmlBody = htmlBody.replace(/Triage notifications, keep track of [^.]+ Download it today!?/gi, "");
-            plainBody = plainBody.replace("Triage notifications, keep track of coding agent tasks and review pull requests on the go with GitHub Mobile for iOS and Android. Download it today!", "");
-            
-            // 3. הסרת השורה השלישית הדינמית במידה והיא קיימת במקרה במיילים אחרים
-            htmlBody = htmlBody.replace(/You are receiving this because [^<\n\r]+/g, ""); 
-            plainBody = plainBody.replace(/You are receiving this because [^\n\r]+/g, "");
-
-            try {
-              GmailApp.sendEmail(targetEmail, subject, plainBody, {
-                htmlBody: htmlBody,
-                replyTo: githubReplyTo 
-              });
-              console.log(`הודעה הועברה בהצלחה אל ${targetEmail}.`);
-            } catch (err) {
-              console.error(`שגיאה בשליחת המייל אל ${targetEmail}: ${err.toString()}`);
-            }
-          } else {
-            console.log(`[התעלמות] לא נמצאה כתובת אימייל בגיליון עבור: ${issueUrl}`);
-          }
-        } else {
-           console.log(`לא זוהה קישור תקין ל-Issue במייל עם הנושא: "${subject}".`);
-        }
-        
-        message.markRead();
-      }
-    });
-  });
-  
-  console.log('סיום עיבוד האימיילים.');
+  console.log('בודק הרשאת Mail (שולח מייל בדיקה לעצמך)...');
+  MailApp.sendEmail(SENDER_EMAIL, 'בדיקת הרשאות - תוסף דיווח באגים', 'זהו מייל בדיקה בלבד. אם קיבלת אותו, הרשאת השליחה תקינה.');
+  console.log('הרשאת Mail תקינה. מייל בדיקה נשלח.');
 }
 
 function testDoPostInternal() {
@@ -285,5 +322,28 @@ function testDoPostInternal() {
   // קריאה ישירה לפונקציה הראשית
   const response = doPost(mockEvent);
   console.log("תשובת המערכת מבקשת ה-POST:");
+  console.log(response.getContent());
+}
+
+function testGitHubWebhookInternal() {
+  console.log("--- מתחיל בדיקת Webhook פנימית (יש למלא issueUrl קיים בגיליון) ---");
+
+  const mockEvent = {
+    parameter: { secret: GITHUB_WEBHOOK_SECRET },
+    postData: {
+      contents: JSON.stringify({
+        action: 'created',
+        issue: { html_url: 'https://github.com/Otzaria/otzaria/issues/1' }, // 🔴 להחליף בכתובת Issue קיימת בגיליון
+        comment: {
+          user: { login: 'בודק פנימי' },
+          body: 'זו תגובת בדיקה.',
+          html_url: 'https://github.com/Otzaria/otzaria/issues/1#issuecomment-1'
+        }
+      })
+    }
+  };
+
+  const response = doPost(mockEvent);
+  console.log("תשובת המערכת מבקשת ה-Webhook:");
   console.log(response.getContent());
 }
