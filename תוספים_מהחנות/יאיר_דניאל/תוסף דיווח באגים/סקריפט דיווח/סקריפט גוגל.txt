@@ -1,0 +1,289 @@
+// =================================================================
+// הגדרות - כל הנתונים שלך כבר מוזנים בפנים!
+// =================================================================
+const GITHUB_PERSONAL_ACCESS_TOKEN = 'PASTE_YOUR_GITHUB_TOKEN_HERE';
+
+const REPO_OWNER = 'Otzaria';
+const REPO_NAME = 'otzaria';
+
+const CLOUDINARY_CLOUD_NAME = 'dolbpinh6';
+const CLOUDINARY_API_KEY = '329884683897627';
+const CLOUDINARY_API_SECRET = 'PASTE_YOUR_CLOUDINARY_API_SECRET_HERE';
+
+const SPREADSHEET_ID = '1yZjFBMTfq9esrawHGGoKqc-QIabRNWI74NnsManuctE';
+const SHEET_NAME = 'דיווח באגים לאוצריא - התוסף';
+const SENDER_EMAIL = 'otzaria.dev@gmail.com';
+
+// =================================================================
+// קבלת נתונים ישירות מהתוסף
+// =================================================================
+function doPost(e) {
+  console.log('--- התחלת עיבוד בקשת POST ---');
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const userEmail = data.email;
+    const username  = data.username;
+
+    console.log(`מזהה מדווח: שם - ${username}, אימייל - ${userEmail}`);
+
+    // ── הגנת idempotency: חוסם כפילות אם אותה בקשה (אימייל+תיאור) נשלחה פעמיים בטווח קצר ──
+    console.log('בודק כפילויות (Idempotency)...');
+    const cache = CacheService.getScriptCache();
+    const digest = Utilities.computeDigest(
+      Utilities.DigestAlgorithm.MD5,
+      (userEmail || '') + '|' + (data.desc || '')
+    );
+    const dedupeKey = 'rep_' + Utilities.base64EncodeWebSafe(digest);
+    if (cache.get(dedupeKey)) {
+      console.log('זהירות: זוהתה בקשה כפולה (נשלחה שניות ספורות לפני כן). מבטל פעולה כדי למנוע כפילויות בגיטהאב.');
+      return ContentService.createTextOutput(JSON.stringify({ success: true, duplicate: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    cache.put(dedupeKey, '1', 120); // נעילה ל-120 שניות
+    console.log('הבקשה תקינה ולא כפולה. ממשיך בעיבוד.');
+
+    let messageBody = `**שולח:** ${username}\n\n**גרסת תוכנה:** ${data.version}\n\n${data.desc}`;
+    let uploadedImageMarkdowns = [];
+
+    // העלאת התמונות ל-Cloudinary ישירות מ-Base64
+    if (data.images && data.images.length > 0) {
+      console.log(`מזהה ${data.images.length} תמונות מצורפות. מתחיל העלאה ל-Cloudinary...`);
+      for (let i = 0; i < data.images.length; i++) {
+        const secureUrl = uploadBase64ToCloudinary(data.images[i]);
+        if (secureUrl) {
+          console.log(`תמונה ${i + 1} הועלתה בהצלחה: ${secureUrl}`);
+          uploadedImageMarkdowns.push(`![תמונה מצורפת](${secureUrl})`);
+        } else {
+          console.error(`שגיאה בהעלאת תמונה ${i + 1}. ממשיך ללא התמונה.`);
+        }
+      }
+      if (uploadedImageMarkdowns.length > 0) {
+        messageBody += `\n\n---\n\n${uploadedImageMarkdowns.join('\n')}`;
+      }
+    } else {
+      console.log('לא צורפו תמונות לדיווח.');
+    }
+
+    // יצירת ה-Issue בגיטהאב
+    const issueTitle = data.title || `באג ע"י ${username}`;
+    console.log(`מתחיל יצירת Issue בגיטהאב עם הכותרת: "${issueTitle}"`);
+    const issueData = createGitHubIssue(REPO_OWNER, REPO_NAME, issueTitle, messageBody);
+
+    if (!issueData || !issueData.html_url) {
+      console.error('היצירה בגיטהאב נכשלה. מסיר נעילת Idempotency ומחזיר שגיאה.');
+      cache.remove(dedupeKey); // יצירת ה-Issue נכשלה — לאפשר ניסיון חוזר
+      return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'שגיאה ביצירת גיטאב' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    console.log(`ה-Issue נוצר בהצלחה בגיטהאב! כתובת: ${issueData.html_url}`);
+
+    // כתיבת הנתונים לגיליון (עמודות A-L).
+    console.log('מתחיל כתיבת נתונים ל-Google Sheets...');
+    try {
+      const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+      const newRow = [];
+      newRow[0]  = new Date();                        // חותמת זמן
+      newRow[1]  = username;                          // שם שולח (עמודה B)
+      newRow[2]  = issueTitle;                        // כותרת הדיווח
+      newRow[3]  = data.desc;                         // תוכן ההודעה
+      newRow[4]  = uploadedImageMarkdowns.join(', '); // קבצים ותמונות
+      newRow[5]  = '';                                // מספר דיווח (ריק בדיווח חדש)
+      newRow[6]  = '';                                // תוכן תגובה (ריק)
+      newRow[7]  = '';                                // קבצי תגובה (ריק)
+      newRow[8]  = userEmail;                         // אימייל מדווח
+      newRow[9]  = `${REPO_OWNER}/${REPO_NAME}`;      // מאגר גיטהאב
+      newRow[10] = issueData.html_url;                // כתובת הדיווח בגיטהאב
+      newRow[11] = data.version;                      // גרסת תוכנה (עמודה L)
+      sheet.appendRow(newRow);
+      console.log('הנתונים נכתבו בהצלחה ל-Google Sheets.');
+    } catch (sheetErr) {
+      console.error('כתיבה לגיליון נכשלה (ה-Issue נוצר בכל זאת בגיטהאב): ' + sheetErr);
+    }
+
+    console.log('--- סיום עיבוד בקשת POST בהצלחה ---');
+    return ContentService.createTextOutput(JSON.stringify({ success: true, url: issueData.html_url }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    console.error('שגיאה כללית בפונקציה doPost: ' + error.toString());
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// תגובה ידידותית לגישה ישירה בדפדפן (GET)
+function doGet(e) {
+  console.log('בקשת GET התקבלה.');
+  return ContentService.createTextOutput(JSON.stringify({
+    status: 'ok',
+    message: 'מערכת דיווח הבאגים של אוצריא פעילה. דיווחים נשלחים ב-POST בלבד.'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// =================================================================
+// פונקציות עזר - העלאה לקלאודינרי ויצירת גיטאב
+// =================================================================
+
+function uploadBase64ToCloudinary(base64Data) {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const signature = generateCloudinarySignature(timestamp);
+    const payload = {
+      'file': base64Data,
+      'api_key': CLOUDINARY_API_KEY,
+      'timestamp': timestamp.toString(),
+      'signature': signature
+    };
+    const options = { 'method': 'post', 'payload': payload, 'muteHttpExceptions': true };
+    const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`;
+    
+    const response = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(response.getContentText());
+    if (result.secure_url) {
+      return result.secure_url;
+    }
+    console.error('שגיאה מה-API של Cloudinary: המערכת לא החזירה secure_url', result);
+    return null;
+  } catch (error) {
+    console.error('שגיאה בפונקציה uploadBase64ToCloudinary: ' + error.toString());
+    return null;
+  }
+}
+
+function generateCloudinarySignature(timestamp) {
+  const stringToSign = `timestamp=${timestamp}${CLOUDINARY_API_SECRET}`;
+  const signatureBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, stringToSign);
+  return signatureBytes.reduce((str, chr) => {
+    chr = (chr < 0 ? chr + 256 : chr).toString(16);
+    return str + (chr.length < 2 ? '0' : '') + chr;
+  }, '');
+}
+
+function createGitHubIssue(owner, repo, title, body) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues`;
+  const payload = JSON.stringify({ 'title': title, 'body': body });
+  const options = {
+    'method': 'post', 'contentType': 'Application/json',
+    'headers': { 'Authorization': `Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}`, 'Accept': 'Application/vnd.github.v3+json' },
+    'payload': payload, 'muteHttpExceptions': true
+  };
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const result = JSON.parse(response.getContentText());
+    if (response.getResponseCode() === 201 && result.html_url) {
+      return result;
+    }
+    console.error('שגיאה ביצירת Issue. Response Code: ' + response.getResponseCode() + ' | שגיאה: ' + response.getContentText());
+    return null;
+  } catch (error) {
+    console.error('שגיאה בפונקציה createGitHubIssue: ' + error.toString());
+    return null;
+  }
+}
+
+// =================================================================
+// סריקת אימיילים מתיבת הדואר והעברתם למשתמשים
+// =================================================================
+
+function processGitHubEmails() {
+  console.log('מחפש שרשורי אימייל חדשים מגיטהאב...');
+  
+  const threads = GmailApp.search('from:notifications@github.com is:unread');
+  
+  if (threads.length === 0) {
+    console.log('לא נמצאו אימיילים חדשים שלא נקראו מגיטהאב.');
+    return;
+  }
+
+  const sheetData = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME).getDataRange().getValues();
+
+  threads.forEach(thread => {
+    const messages = thread.getMessages();
+    
+    messages.forEach(message => {
+      if (message.isUnread()) {
+        const subject = message.getSubject();
+        let htmlBody = message.getBody(); 
+        let plainBody = message.getPlainBody(); 
+        const githubReplyTo = message.getReplyTo(); 
+        
+        const urlMatch = plainBody.match(/https:\/\/github\.com\/[^\/]+\/[^\/]+\/issues\/\d+/);
+        
+        if (urlMatch) {
+          const issueUrl = urlMatch[0];
+          console.log(`---> מעבד אימייל עבור ה-Issue: ${issueUrl}`);
+          
+          let targetEmail = null;
+          
+          for (let i = 1; i < sheetData.length; i++) {
+            if (sheetData[i][10] === issueUrl && sheetData[i][8]) {
+              targetEmail = sheetData[i][8];
+              break; 
+            }
+          }
+          
+          if (targetEmail) {
+            console.log(`[נמצאה התאמה] מחליף טקסטים ומעביר את העדכון לכתובת: ${targetEmail}`);
+            
+            const hebrewReplacementHtml = `לתגובה השב על מייל זה או <a href="${issueUrl}">עבור אל גיטהאב</a>`;
+            const hebrewReplacementPlain = `לתגובה השב על מייל זה או עבור אל גיטהאב: ${issueUrl}`;
+            
+            // 1. החלפת שורה ראשונה (מטפל בצורה חכמה בתגיות ה-HTML של הקישורים)
+            htmlBody = htmlBody.replace(/Reply to this email directly, <a [^>]+>view it on GitHub<\/a>, or <a [^>]+>unsubscribe<\/a>\.?/gi, hebrewReplacementHtml);
+            plainBody = plainBody.replace("Reply to this email directly, view it on GitHub, or unsubscribe.", hebrewReplacementPlain);
+            
+            // 2. הסרת שורת הפרסומת לאפליקציה (השורה השנייה) - תופס את כל הבלוק כולל הקישורים שבתוכו
+            htmlBody = htmlBody.replace(/Triage notifications, keep track of [^.]+ Download it today!?/gi, "");
+            plainBody = plainBody.replace("Triage notifications, keep track of coding agent tasks and review pull requests on the go with GitHub Mobile for iOS and Android. Download it today!", "");
+            
+            // 3. הסרת השורה השלישית הדינמית במידה והיא קיימת במקרה במיילים אחרים
+            htmlBody = htmlBody.replace(/You are receiving this because [^<\n\r]+/g, ""); 
+            plainBody = plainBody.replace(/You are receiving this because [^\n\r]+/g, "");
+
+            try {
+              GmailApp.sendEmail(targetEmail, subject, plainBody, {
+                htmlBody: htmlBody,
+                replyTo: githubReplyTo 
+              });
+              console.log(`הודעה הועברה בהצלחה אל ${targetEmail}.`);
+            } catch (err) {
+              console.error(`שגיאה בשליחת המייל אל ${targetEmail}: ${err.toString()}`);
+            }
+          } else {
+            console.log(`[התעלמות] לא נמצאה כתובת אימייל בגיליון עבור: ${issueUrl}`);
+          }
+        } else {
+           console.log(`לא זוהה קישור תקין ל-Issue במייל עם הנושא: "${subject}".`);
+        }
+        
+        message.markRead();
+      }
+    });
+  });
+  
+  console.log('סיום עיבוד האימיילים.');
+}
+
+function testDoPostInternal() {
+  console.log("--- מתחיל בדיקת יצירת דיווח פנימית ---");
+  
+  // יצירת אירוע מדומה בדיוק במבנה שמגיע מהתוסף
+  const mockEvent = {
+    postData: {
+      contents: JSON.stringify({
+        username: "בודק פנימי",
+        email: "your_real_email@example.com", // 🔴 שים כאן את המייל שלך
+        title: "בדיקת מערכת פנימית מתוך העורך",
+        desc: "בדיקה זו נועדה לוודא שיצירת ה-Issue והרישום בגיליון עובדים ללא תלות בדפדפן.",
+        images: [],
+        version: "Test-1.0"
+      })
+    }
+  };
+  
+  // קריאה ישירה לפונקציה הראשית
+  const response = doPost(mockEvent);
+  console.log("תשובת המערכת מבקשת ה-POST:");
+  console.log(response.getContent());
+}
