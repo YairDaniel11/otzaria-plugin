@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "com.natanel26.gvulot-haaretz",
   "name": "גבולות הארץ",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "מפה אינטראקטיבית של גבולות ארץ ישראל לפי השיטות ההלכתיות - מהמקרא, הראשונים והאחרונים ועד גבולות המדינה היום",
   "author": "יהודי נודד",
   "stability": "beta",
@@ -18,7 +18,7 @@
     "toolTab": {
       "title": "גבולות הארץ",
       "order": 100,
-      "defaultPinned": false,
+      "defaultPinned": true,
       "iconName": "map_24_regular"
     }
   }

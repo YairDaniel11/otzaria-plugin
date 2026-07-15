@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "com.natanel26.gvulot-haaretz-editor",
+  "name": "עורך גבולות",
+  "version": "1.0.1",
+  "description": "עורך גרפי לקווי הגבול ונקודות הציון של כל שיטה במפת גבולות הארץ. מיועד למי שלמד את התחום בלבד - לא לשימוש כללי. שינויים דורשים ייצוא ושליחה למפתח.",
+  "author": "יהודי נודד",
+  "stability": "beta",
+  "entrypoint": "editor.html",
+  "minAppVersion": "0.9.93",
+  "sdkVersion": "1.x",
+  "type": "webapp",
+  "category": "Reference",
+  "permissions": [
+    "events.subscribe:theme.changed"
+  ],
+  "contributes": {
+    "toolTab": {
+      "title": "עורך גבולות",
+      "order": 101,
+      "defaultPinned": true,
+      "iconName": "edit_24_regular"
+    }
+  }
+}
