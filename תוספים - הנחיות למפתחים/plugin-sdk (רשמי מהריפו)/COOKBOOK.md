@@ -7,6 +7,7 @@
 1. [גופן מותאם אישית](#1-גופן-מותאם-אישית)
 2. [אייקונים מאוצריא](#2-אייקונים-מאוצריא)
 3. [חלונית הגדרות בסגנון אוצריא](#3-חלונית-הגדרות-בסגנון-אוצריא)
+4. [סרגל כותרת התוסף (Top Bar)](#4-סרגל-כותרת-התוסף-top-bar)
 
 ---
 
@@ -415,6 +416,152 @@ setToggle('set-israel', isInIsrael, (v) => {
 | סגמנט נבחר | רקע `secondaryContainer`, טקסט `onSecondaryContainer` | `AppSegmentedControl` |
 | מתג דלוק | track `primary`, thumb `onPrimary` | `CustomSwitch` (M3) |
 | מתג כבוי | track `surfaceContainerHighest`, thumb `outline` | `CustomSwitch` (M3) |
+
+---
+
+## 4. סרגל כותרת התוסף (Top Bar)
+
+התוסף נפתח כטאב קריאה, ליד טאבים של ספרים, ואוצריא **אינה** מציירת כותרת מעל ה-WebView.
+לכן **שם התוסף חייב להופיע בפס עליון קבוע ברקע `surfaceContainerHigh` מה-API** — אותו צבע ואותו גובה
+כמו הסרגל העליון של מסכי הספרים. כותרת ענקית בגוף התוכן, שגוללת עם התוכן ונחתכת בחלון צר, שוברת את האחידות.
+
+העקרונות והערכים המדויקים ב-[DESIGN_GUIDE.md § סרגל כותרת התוסף](DESIGN_GUIDE.md#סרגל-כותרת-התוסף-top-bar).
+כאן המתכון המלא: פס בשלוש קבוצות — שם התוסף ובורר בקצה ההתחלה, ניווט פנימי במרכז, פעולות בקצה הסיום.
+
+### א. משתני ה-theme הנדרשים
+
+הפס צריך שני תפקידי צבע מעבר לבסיסיים (הוסף ל-`applyTheme`):
+
+```javascript
+r.style.setProperty('--color-surface-container-high', cs.surfaceContainerHigh); // רקע הפס
+r.style.setProperty('--color-on-surface-variant',     cs.onSurfaceVariant);     // כותרת משנה
+```
+
+### ב. ה-HTML
+
+```html
+<div class="app-shell">
+  <header class="topbar">
+    <!-- קבוצת התחלה: שם התוסף + בורר הקשר -->
+    <div class="topbar-side">
+      <h1>עיון ההלכה</h1>
+      <button class="topbar-chip">גליון 241 · תמוז</button>
+    </div>
+
+    <!-- מרכז: ניווט פנימי -->
+    <nav class="topbar-nav">
+      <button class="nav-btn active">הספקים</button>
+      <button class="nav-btn">שאלות</button>
+    </nav>
+
+    <!-- קבוצת סיום: פעולות -->
+    <div class="topbar-side topbar-end">
+      <button class="topbar-btn" title="הגדרות" aria-label="הגדרות">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-content">
+    <!-- כל התוכן — הוא שגולל, לא העמוד -->
+  </main>
+</div>
+```
+
+### ג. ה-CSS
+
+```css
+html, body, #root { height: 100%; margin: 0; }
+body { overflow: hidden; }          /* הגלילה בתוכן, לא בעמוד */
+
+.app-shell { display: flex; flex-direction: column; height: 100%; }
+
+/* ── הפס ─────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; gap: 10px;
+  height: 56px; padding: 0 16px;
+  background: var(--color-surface-container-high);
+  flex-shrink: 0;                   /* לא נדחס כשהתוכן גדל */
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 16px;                  /* px קשיח — ראה המלכוד למטה */
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+}
+
+/* שלוש קבוצות בשורה אחת; min-width:0 מאפשר לטקסט להתקצר במקום לדחוף */
+.topbar-side { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.topbar-end  { justify-content: flex-end; }
+
+/* ── בורר הקשר (chip) ────────────────────────────── */
+.topbar-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  background: var(--color-secondary-container);
+  color: var(--color-on-secondary-container);
+  border: none; border-radius: var(--radius-pill);
+  padding: 5px 12px; cursor: pointer; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── ניווט פנימי (pills) ─────────────────────────── */
+.topbar-nav { display: flex; gap: 4px; flex: 0 0 auto; }
+.nav-btn {
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  background: transparent; color: var(--color-on-surface-variant);
+  border: none; border-radius: var(--radius-pill);
+  padding: 6px 14px; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-btn.active {
+  background: var(--color-secondary-container);
+  color: var(--color-on-secondary-container);
+}
+
+/* ── כפתור פעולה ─────────────────────────────────── */
+.topbar-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 13px;
+  background: transparent; border: none; border-radius: var(--radius-sm);
+  color: var(--color-on-surface-variant);
+  padding: 6px 10px; cursor: pointer;
+}
+.topbar-btn:hover { color: var(--color-on-surface); }
+.topbar-btn svg { width: 20px; height: 20px; }
+
+/* ── התוכן — הוא שגולל ───────────────────────────── */
+.app-content { flex: 1; min-width: 0; overflow-y: auto; padding: 16px; }
+
+/* ── מסך צר: פס נמוך, בלי הניווט המרכזי ──────────── */
+@media (max-width: 600px) {
+  .topbar { height: 44px; padding: 0 10px; }
+  .topbar-nav { display: none; }   /* העבר את הניווט לתפריט/תחתית */
+}
+```
+
+### ד. המלכודים
+
+| מלכוד | מה קורה | הפתרון |
+|-------|---------|--------|
+| `body { min-height: 100vh }` | העמוד כולו גולל, הכותרת נעלמת בגלילה ונחתכת בחלון נמוך | `height: 100%` + `overflow: hidden`, והגלילה ב-`.app-content` |
+| כותרת הפס ב-`em` | `typography.fontSize` הוא גודל גופן **הספר** (עד 36px) — הפס מתפוצץ ולא מתיישר עם הסרגל של אוצריא לידו | `font-size: 16px` — px קשיח **בפס בלבד**; תוכן התוסף נשאר יחסי |
+| בלי `flex-shrink: 0` על הפס | תוכן גבוה דוחס את הפס והכותרת נחתכת | `flex-shrink: 0` |
+| בלי `min-width: 0` על הקבוצות | טקסט ארוך דוחף את הפעולות מחוץ לחלון | `min-width: 0` + `text-overflow: ellipsis` |
+| רקע קשיח לפס (`#f5f0e8`) | הפס לא מתחלף במצב כהה או בהחלפת ערכת צבעים | `var(--color-surface-container-high)` + `theme.changed` |
+
+### למה אלה הערכים?
+
+| פריט | ערך | מקור באוצריא |
+|------|-----|--------------|
+| רקע הפס | `surfaceContainerHigh` | `AppSurfaces.topBarBackground` |
+| גובה הפס | 56px · 44px במסך צר | `AppTopBar` (`_kTouchHeight` / `_kCompactHeight`) |
+| כותרת | 16px, `w600`, `onSurface` | `AppTopBar.titleStyle` |
+| כותרת משנה / מחבר | 12px, `w400`, `onSurfaceVariant` | `AppTopBar.subtitleStyle` |
+| pill ניווט פעיל | `secondaryContainer` / `onSecondaryContainer` | סרגל הניווט הצדי |
 
 ---
 

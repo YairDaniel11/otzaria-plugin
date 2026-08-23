@@ -102,6 +102,8 @@ applyTheme(theme);
   --color-on-secondary: #FFFFFF;
   --color-surface:    #FFFBFE;
   --color-on-surface: #1C1B1F;
+  --color-on-surface-variant: #49454F;
+  --color-surface-container-high:    #ECE6F0;  /* רקע פס הכותרת */
   --color-surface-container-highest: #E6E0E9;
   --color-error:    #B3261E;
   --color-on-error: #FFFFFF;
@@ -141,7 +143,8 @@ function applyTheme(theme) {
   root.style.setProperty('--color-on-secondary-container', cs.onSecondaryContainer);
   root.style.setProperty('--color-surface',     cs.surface);
   root.style.setProperty('--color-on-surface',  cs.onSurface);
-  // רקע הסרגל העליון (AppTopBar) במסכי הספרים
+  root.style.setProperty('--color-on-surface-variant', cs.onSurfaceVariant);
+  // רקע הסרגל העליון (AppTopBar) — וגם פס הכותרת של התוסף
   root.style.setProperty('--color-surface-container-high',    cs.surfaceContainerHigh);
   root.style.setProperty('--color-surface-container-highest', cs.surfaceContainerHighest);
   root.style.setProperty('--color-error',    cs.error);
@@ -183,6 +186,8 @@ function hexToRgba(hex, alpha) {
 | `--color-on-secondary` | On Secondary | טקסט/אייקון על רקע secondary |
 | `--color-surface` | Surface | רקע כרטיסים, חלוניות, תיבות קלט |
 | `--color-on-surface` | On Surface | טקסט ראשי, אייקונים |
+| `--color-on-surface-variant` | On Surface Variant | טקסט משני, כותרת משנה, אייקוני פעולה |
+| `--color-surface-container-high` | Surface Container High | **פס כותרת התוסף** (כמו הסרגל העליון של מסכי הספרים), פאנלים צפים |
 | `--color-surface-container-highest` | Surface Container Highest | פופאוברים, דיאלוגים, שכבות מוגבהות |
 | `--color-error` | Error | הודעות שגיאה, גבולות שגיאה |
 | `--color-on-error` | On Error | טקסט בתוך אלמנטי שגיאה |
@@ -427,6 +432,85 @@ body {
 
 ---
 
+## סרגל כותרת התוסף (Top Bar)
+
+תוסף נפתח כטאב קריאה, ליד טאבים של ספרים. אוצריא **אינה** מציירת כותרת מעל ה-WebView — כל מה שנראה במסך הוא של התוסף. לכן:
+
+> **כותרת התוסף חייבת להופיע בפס עליון קבוע, ברקע `surfaceContainerHigh` שמגיע מה-API — בדיוק כמו הסרגל העליון של מסכי הספרים.**
+
+זה מה שיוצר את האחידות: המשתמש עובר מטאב של ספר לטאב של תוסף ורואה את אותו פס באותו צבע.
+
+**מה שגוי:** כותרת ענקית בגוף התוכן (`<h1>` בתוך הדף), שמתחילה מיד מתחת לשורת הטאבים, גוללת יחד עם התוכן ונחתכת בחלון צר.
+
+### הערכים המדויקים (מתוך `AppTopBar` של אוצריא)
+
+| פריט | ערך |
+|------|-----|
+| רקע הפס | `colorScheme.surfaceContainerHigh` |
+| גובה הפס | 56px (עכבר/מגע) · 44px במסך צר |
+| כותרת | 16px, `font-weight: 600`, בצבע `onSurface` |
+| כותרת משנה / מחבר | 12px, `font-weight: 400`, בצבע `onSurfaceVariant` |
+| הפס עצמו | `flex-shrink: 0` — לא נדחס ולא נגלל |
+
+> **מלכוד: גדלי הפס הם px קשיחים — לא `em`.** זה החריג היחיד לכלל "עבוד ביחידות יחסיות". `typography.fontSize` הוא גודל גופן **הספר** שהמשתמש בחר (עד 36px); אם הכותרת תהיה `1.15em` היא תתפוצץ לפס בגובה 40px+ אצל משתמש שהגדיר גופן גדול, בשונה מהסרגל של אוצריא לידו. תוכן התוסף — כן ביחידות יחסיות.
+
+### הפריסה: פס קבוע + תוכן שגולל
+
+```css
+html, body, #root { height: 100%; margin: 0; }
+body { overflow: hidden; }   /* הגלילה קורית בתוכן, לא בעמוד */
+
+.app-shell { display: flex; flex-direction: column; height: 100%; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 56px;
+  padding: 0 16px;
+  background: var(--color-surface-container-high);
+  flex-shrink: 0;
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-on-surface);
+  white-space: nowrap;   /* הכותרת לא נשברת לשתי שורות */
+}
+.topbar .subtitle {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-content { flex: 1; min-width: 0; overflow-y: auto; padding: 16px; }
+
+/* מסך צר — פס נמוך יותר, כמו מצב compact של אוצריא */
+@media (max-width: 600px) {
+  .topbar { height: 44px; }
+}
+```
+
+```html
+<div class="app-shell">
+  <header class="topbar">
+    <h1>שם התוסף</h1>
+    <span class="subtitle">כותרת משנה אופציונלית</span>
+    <!-- כפתורי פעולה כאן -->
+  </header>
+  <main class="app-content">
+    <!-- כל התוכן — הוא שגולל, לא העמוד -->
+  </main>
+</div>
+```
+
+מתכון מלא, עם פעולות בקצה הפס ובורר במרכזו, ב-[COOKBOOK.md § 4](COOKBOOK.md#4-סרגל-כותרת-התוסף-top-bar).
+
+---
+
 ## מיכל שלד אפליקציה
 
 תבנית מומלצת לתוסף שלם:
@@ -444,6 +528,8 @@ body {
       --color-primary: #6750A4; --color-on-primary: #FFFFFF;
       --color-secondary: #625B71; --color-on-secondary: #FFFFFF;
       --color-surface: #FFFBFE; --color-on-surface: #1C1B1F;
+      --color-on-surface-variant: #49454F;
+      --color-surface-container-high: #ECE6F0;   /* רקע פס הכותרת */
       --color-surface-container-highest: #E6E0E9;
       --color-error: #B3261E; --color-on-error: #FFFFFF;
       --color-outline: #79747E;
@@ -456,6 +542,8 @@ body {
       --radius-lg: 16px; --radius-pill: 999px;
     }
 
+    html, body { height: 100%; }
+
     body {
       font-family: var(--font-main);
       font-size: var(--font-size-base);
@@ -463,13 +551,38 @@ body {
       background: var(--color-surface);
       color: var(--color-on-surface);
       direction: rtl;
-      min-height: 100vh;
+      overflow: hidden;   /* גולל התוכן, לא העמוד */
     }
+
+    /* שלד: פס כותרת קבוע + תוכן גולל — ראה "סרגל כותרת התוסף" */
+    .app-shell { display: flex; flex-direction: column; height: 100%; }
+
+    .topbar {
+      display: flex; align-items: center; gap: 10px;
+      height: 56px; padding: 0 16px;
+      background: var(--color-surface-container-high);
+      flex-shrink: 0;
+    }
+    .topbar h1 {
+      margin: 0; font-size: 16px; font-weight: 600;
+      color: var(--color-on-surface); white-space: nowrap;
+    }
+    @media (max-width: 600px) { .topbar { height: 44px; } }
+
+    .app-content { flex: 1; min-width: 0; overflow-y: auto; padding: 16px; }
   </style>
 </head>
 <body>
 
-  <!-- תוכן התוסף -->
+  <div class="app-shell">
+    <header class="topbar">
+      <h1>שם התוסף</h1>
+      <!-- כפתורי פעולה כאן -->
+    </header>
+    <main class="app-content">
+      <!-- תוכן התוסף -->
+    </main>
+  </div>
 
   <script>
     function applyTheme(theme) {
@@ -484,6 +597,7 @@ body {
       r.style.setProperty('--color-on-secondary-container', cs.onSecondaryContainer);
       r.style.setProperty('--color-surface',     cs.surface);
       r.style.setProperty('--color-on-surface',  cs.onSurface);
+      r.style.setProperty('--color-on-surface-variant', cs.onSurfaceVariant);
       r.style.setProperty('--color-surface-container-high',    cs.surfaceContainerHigh);
       r.style.setProperty('--color-surface-container-highest', cs.surfaceContainerHighest);
       r.style.setProperty('--color-error',    cs.error);
@@ -639,6 +753,9 @@ popover.addEventListener('click', function(e) {
 | `border: 1px solid #ccc` | `border: 1px solid var(--color-outline)` |
 | `border-radius: 20px` (שרירותי) | `border-radius: var(--radius-md)` |
 | ללא `Otzaria.on('theme.changed')` | תמיד להקשיב לשינוי theme (עם הרשאת `events.subscribe:theme.changed`) |
+| `<h1>` ענק בגוף התוכן ככותרת התוסף | פס עליון קבוע ברקע `var(--color-surface-container-high)` |
+| `body { min-height: 100vh }` — העמוד כולו גולל והכותרת נעלמת/נחתכת | `body { height: 100%; overflow: hidden }` + תוכן ב-`overflow-y: auto` |
+| כותרת הפס ב-`em` — מתפוצצת בגופן גדול | `font-size: 16px` בפס בלבד (תוכן התוסף נשאר יחסי) |
 
 ---
 

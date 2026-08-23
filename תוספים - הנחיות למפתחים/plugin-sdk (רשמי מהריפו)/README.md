@@ -146,7 +146,7 @@ my-plugin/
 | `icon` | `null` | נתיב לאייקון (PNG, 64×64 מומלץ) |
 | `maxAppVersion` | `null` | גרסת אוצריא המקסימלית הנתמכת |
 | `network.enabled` | `false` | האם להצהיר על שימוש ברשת (חובה כדי להפעיל את מנגנון הרשת בתוסף) |
-| `network.allowlist` | `[]` | רשימת ה-URLs שהתוסף מצהיר שהוא צריך. ה-URL חייב להופיע כאן **וגם** להיות מאושר ע"י אוצריא: או ברשימה המובנית `pluginNetworkAllowlist`, או בקובץ המקביל הרשמי ב-GitHub של אוצריא. הצהרה ב-manifest לבדה **אינה** מספיקה. |
+| `network.allowlist` | `[]` | רשימת ה-URLs שהתוסף מצהיר שהוא צריך. ה-URL חייב להופיע כאן **וגם** להיות מאושר ע"י אוצריא בקובץ `plugin_network_allowlist.txt` שבשורש ריפו אוצריא ב-GitHub (ענף `dev`). הצהרה ב-manifest לבדה **אינה** מספיקה. |
 | `contributes.toolTab.title` | שם התוסף | כותרת הטאב. אם מגדירים אותה במפורש — חייבת להיות זהה ל-`name` (עד 14 תווים), אחרת התוסף יידחה |
 | `contributes.toolTab.order` | `900` | סדר הופעה בטאבים (מספר נמוך = קודם) |
 | `contributes.toolTab.allowOrderBeforeBuiltIns` | `false` | חריג מפורש שמאפשר לתוסף להתחרות מול הכלים המובנים ולהופיע לפניהם במסך "כלים" |
@@ -154,6 +154,11 @@ my-plugin/
 | `contributes.toolTab.iconName` | `null` | שם אייקון FluentUI 24px שיוצג בטאב, למשל `"book_24_regular"` |
 | `contributes.publishedDataTypes` | `[]` | סוגי נתונים שהתוסף מפרסם |
 | `contributes.background.entrypoint` | `null` | נתיב יחסי לקובץ HTML קליל (ללא UI) שייטען ברקע במקום ה-`entrypoint` המלא. רלוונטי רק לתוסף עם `app.run_on_startup`. ראה §ריצת רקע. |
+| `contributes.startup` | `null` | פקדים, פריטי תפריט ונתונים שאוצריא טוענת ישירות מהמניפסט בלי להפעיל WebView. |
+| `contributes.startup.programs` | `[]` | תכניות חישוב Host מוולדות, ללא JavaScript; ראו `API_REFERENCE.md` §תכניות Host ללא WebView. |
+| `contributes.startup.searchDialogItems` | `[]` | שורות checkbox סטטיות; `openPluginOnSubmit` יכול לנתב את אישור החיפוש לתוסף. |
+| `contributes.startup.activationEvents` | `[]` | אירועים שמעירים את מנוע הרקע בעצלנות; כל נושא דורש גם הרשאת subscribe מתאימה. |
+| `contributes.startup.keepAlive` | `false` | בקשה למנוע כיבוי אוטומטי; דורשת אישור נפרד של `app.background_keep_alive`. |
 
 `homepage` הוא שדה אופציונלי, אבל מומלץ מאוד כשמעלים תוסף לחנות. זה המקום לשים קישור לעמוד ה־GitHub של התוסף, לתיעוד, לאתר הפרויקט, או לכל דף רשמי אחר שמסביר על התוסף ונותן למשתמש מקום לקבל מידע נוסף.
 
@@ -217,8 +222,9 @@ Otzaria.off('calendar.date_changed', handler); // חייב להיות אותו r
 | `plugin.resumed` | 🔁 חוזר | (ללא) — ראה §השהיה ברקע |
 | `theme.changed` | 🔁 חוזר | `ThemePayload` |
 | `navigation.changed` | 🔁 חוזר | `{ screen: string }` |
-| `reader.current_book_changed` | 🔁 חוזר | `{ bookId: string, index: number }` |
+| `reader.current_book_changed` | 🔁 חוזר | `{ bookId: string, id: number?, type: string?, source: string?, index: number }` |
 | `calendar.date_changed` | 🔁 חוזר | `{ date: string }` |
+| `calendar.city_changed` | 🔁 חוזר | `{ city: string }` |
 | `workspace.changed` | 🔁 חוזר | `{ workspaceId: string }` |
 | `settings.changed` | 🔁 חוזר | `{ key: string, newValue: * }` |
 | `plugin.permissions_changed` | 🔁 חוזר | `{ permissions: string[] }` |
@@ -235,6 +241,7 @@ Otzaria.on('plugin.boot', (payload) => {
   payload.app.textDirection  // 'rtl'
   payload.app.runMode        // 'foreground' | 'background' — ראה §ריצת רקע
   payload.theme              // ThemePayload (ראה §ניהול ערכת נושא)
+  payload.connectivity       // { isOfflineMode, hasNetwork, isOnline } — ראה app.getConnectivity
   payload.permissions        // string[] — הרשאות שאושרו
 });
 ```
@@ -280,6 +287,7 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 | `app.getTheme` | `app.info.read` | ערכת נושא מלאה (colorScheme + typography) |
 | `app.getLocale` | `app.info.read` | locale ו-textDirection |
 | `app.openUrl` | `app.open_url` | פתיחת כתובת http/https בדפדפן המערכת |
+| `app.getConnectivity` | `app.info.read` | האם יש אינטרנט — להסתרת יכולות מקוונות |
 
 ### library.*
 
@@ -287,22 +295,30 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 |--------|-------|----------|-------|
 | `library.findBooks` | `library.books.read` | `{ query, limit? }` | `BookMeta[]` |
 | `library.getBookMetadata` | `library.books.read` | `{ bookId }` | `BookMeta \| null` |
+| `library.resolveBooks` | `library.books.read` | `{ items: BookIdentity[] }` (עד 100) | `(BookMeta \| null)[]` |
 | `library.listRecentBooks` | `library.books.read` | — | `{ bookId, title, ref }[]` |
 | `library.getBookContent` | `library.content.read` | `{ bookId, offset?, limit?, section? }` | `string` (max 5000 תווים) |
 | `library.getBookToc` | `library.content.read` | `{ bookId }` | `TocEntry[]` |
+| `library.listBookAltStructures` | `library.content.read` | `{ bookId }` | `AltStructure[]` |
+| `library.getBookAltToc` | `library.content.read` | `{ bookId, structureKey? }` | `TocEntry[]` |
 
 ### search.*
 
 | Method | הרשאה | פרמטרים | החזרה |
 |--------|-------|----------|-------|
 | `search.fullText` | `search.fulltext.read` | `{ query, limit? }` | `SearchResult[]` |
+| `search.query` | `search.fulltext.read` | `{ query, mode?, distance?, proximityScope?, order?, grouping?, wordMatchMode?, options?, wordOptions?, alternativeWords?, customSpacing?, negativeQuery?, categories?, books?, authors?, eras?, baseBooksOnly?, limit?, offset?, includeBookCounts? }` | `{ results, total, groupCount, truncated, facets, bookCounts? }` |
+| `search.getOptions` | `search.fulltext.read` | `{}` | הערכים החוקיים לכל פרמטר של `search.query` |
+
+ב-`search.query`, גודל עמוד מוגבל ל-500 וחלון הדפדוף (`offset + limit`
+לאחר החיתוך) מוגבל ל-10,000 כדי למנוע הקצאת זיכרון לא חסומה במנוע.
 
 ### reader.*
 
 | Method | הרשאה | פרמטרים | החזרה |
 |--------|-------|----------|-------|
 | `reader.openBook` | `reader.open` | `{ bookId, index?, searchQuery? }` | `boolean` |
-| `reader.openBookAtRef` | `reader.open` | `{ bookId, ref, index? }` | `boolean` |
+| `reader.openBookAtRef` | `reader.open` | `{ bookId, ref, index?, highlight? }` | `boolean` |
 | `reader.getCurrentState` | `reader.open` | — | `ReaderState` |
 
 ### navigation.*
@@ -310,6 +326,8 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 | Method | הרשאה | פרמטרים | החזרה |
 |--------|-------|----------|-------|
 | `navigation.goTo` | `navigation.write` | `{ target: 'library'\|'reading'\|'more'\|'settings' }` | `boolean` |
+
+> `'more'` נשמר לתאימות אחורה ופותח את פאנל הכלים. כלים ותוספים נפתחים ככרטיסיות בתוך `'reading'`, ולכן `navigation.changed` לא ישדר `'more'` יותר. כדי לדעת אם התוסף מוצג כעת השתמשו באירועי `plugin.suspended` / `plugin.resumed`.
 
 ### notes.*
 
@@ -361,7 +379,9 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 | Method | הרשאה | החזרה |
 |--------|-------|-------|
 | `calendar.getSelectedDate` | `calendar.read` | `string` (ISO 8601) |
-| `calendar.getDailyTimes`   | `calendar.read` | `Record<string, string>` |
+| `calendar.getDailyTimes`   | `calendar.read` | `Record<string, string>` — מ-0.9.97 מקבל `{ date?, city?, lat?, lng?, elevation?, timezone?, inIsrael? }` |
+| `calendar.getHalachicTimes`| `calendar.read` | `Record<string, string>` — אותם פרמטרים כמו `calendar.getDailyTimes` (מ-0.9.97) |
+| `calendar.getCities`       | `calendar.read` | `CityInfo[]` (מ-0.9.97) |
 | `calendar.getJewishDate`   | `calendar.read` | `JewishDate` |
 | `calendar.getEvents`       | `calendar.read` | `CalendarEvent[]` |
 
@@ -442,6 +462,8 @@ Otzaria.on('theme.changed',  applyTheme);   // ← חשוב! מעדכן בזמן
 
 > **גופנים — אין צורך לארוז:** השמות שמגיעים ב-`theme.typography.fontFamily` ו-`theme.typography.commentatorsFontFamily` (כגון `FrankRuhlCLM`, `Shofar`) נטענים אוטומטית כ-`@font-face` ב-WebView של התוסף לפני ה-`plugin.boot`. ניתן להפנות אליהם ישירות מ-CSS. כשהמשתמש בחר גופן מערכת מותאם, ההזרקה מדלגת עליו ויש להסתמך על fallback של מערכת ההפעלה — לכן השאירו תמיד `serif` (ועדיף גם `'David'`) בסוף שרשרת ה-`font-family`.
 
+> **כותרת התוסף — בפס עליון, לא בגוף התוכן:** התוסף נפתח כטאב קריאה ואוצריא אינה מציירת כותרת מעל ה-WebView. שם התוסף חייב להופיע בפס עליון קבוע ברקע `colorScheme.surfaceContainerHigh` — אותו צבע וגובה כמו הסרגל העליון של מסכי הספרים. ראה [DESIGN\_GUIDE.md § סרגל כותרת התוסף](DESIGN_GUIDE.md#סרגל-כותרת-התוסף-top-bar) ומתכון מלא ב-[COOKBOOK.md § 4](COOKBOOK.md#4-סרגל-כותרת-התוסף-top-bar).
+
 > מדריך עיצוב מלא — Color Roles, צורות, טיפוגרפיה, כפתורים, כרטיסים ואנימציות — ב-[DESIGN_GUIDE.md](DESIGN_GUIDE.md).
 
 ---
@@ -494,12 +516,14 @@ const { data: keys } = await Otzaria.call('storage.list');
 | `published_data.write` | פרסום נתונים לאפליקציה |
 | `ui.feedback` | הצגת הודעות ודיאלוגים |
 | `ui.create_shortcut` | יצירת קיצור דרך (deep-link) בשולחן העבודה / תפריט ההתחל — דורש אישור משתמש |
-| `network.access` | גישה לאינטרנט (דורש `network.enabled: true` במניפסט + שה-URL מופיע ב-allowlist הגלובלי של אוצריא בקוד) |
+| `network.access` | גישה לאינטרנט (דורש `network.enabled: true` במניפסט + שה-URL מופיע ב-allowlist הרשמי של אוצריא ב-GitHub) |
 | `network.localhost` | גישה לשירות מקומי על המחשב (`localhost` / `127.0.0.1`), כמו Ollama / LM Studio. נפרדת מ-`network.access` — אינה מתירה אינטרנט, ואינה דורשת allowlist גלובלי |
 | `fs.user_files.read` | בחירה וקריאה של קובץ אישי (PDF/טקסט) שהמשתמש בוחר בדיאלוג — מוגבל לקובץ שנבחר בלבד |
 | `notifications.send` | הצגת הודעות בתוך האפליקציה (UiSnack) |
 | `notifications.system` | התראות מערכת הפעלה (Native notifications) |
-| `app.run_on_startup` | **הרשאה רגישה** — טעינת התוסף ברקע עם כל עליית אוצריא, גם ללא כניסה למסך "כלים". ברירת מחדל: **כבויה**. ראה §ריצת רקע. |
+| `app.run_on_startup` | **הרשאה רגישה** — הפעלת WebView ברקע לפי אירוע שהוצהר ב-`contributes.startup`. ברירת מחדל: **כבויה**. בתוסף ישן ללא `contributes.startup`, מפעילה זמנית בעליית אוצריא עד 0.9.97. |
+| `app.background_keep_alive` | **הרשאה רגישה מאוד** — מניעת כיבוי אוטומטי של WebView רקע עצל. דורשת `startup.keepAlive: true`; כבויה כברירת מחדל ומוצגת באדום. |
+| `app.startup_contributions` | הזרקת פקדים ונתונים סטטיים מהמניפסט בלי להפעיל את התוסף. ברירת מחדל: **מופעלת**. |
 
 > **עיקרון מינימום הרשאות:** בקש רק את מה שאתה צריך בפועל.
 
@@ -507,24 +531,37 @@ const { data: keys } = await Otzaria.call('storage.list');
 
 ## ריצת רקע (app.run\_on\_startup)
 
-הרשאה זו מאפשרת לתוסף להיטען ולרוץ ברקע **מיד עם עליית אוצריא**, עוד לפני שהמשתמש נכנס למסך "כלים". היא מיועדת לתוספים שצריכים לבצע פעולות בזמן פתיחת האפליקציה — למשל שליחת הודעת ברוכים הבאים, טעינת נתונים ראשוניים, תזמון התראה, וכו'.
+הדרך המומלצת היא להצהיר על `contributes.startup`. אוצריא קוראת את הפקדים,
+פריטי התפריט והנתונים הסטטיים ב-Dart, ולכן WebView כלל לא נוצר בעלייה. אם נדרש
+קוד JavaScript, `app.run_on_startup` מתירה להפעיל WebView רק כשמתרחש אירוע
+שהוצהר: לחיצה על תרומה, `app.startup`, או נושא מתוך `activationEvents`.
+
+מנוע כזה נסגר אחרי כשלוש דקות ללא פעילות, והאירוע הבא יפעיל אותו מחדש. אפשר
+לסיים מוקדם באמצעות `plugin.backgroundDone`. רק צורך אמיתי במנוע רציף מצדיק
+`startup.keepAlive: true` ואת ההרשאה הנפרדת `app.background_keep_alive`.
 
 ### הצהרה במניפסט
 
 ```json
 {
   "permissions": [
+    "app.startup_contributions",
     "app.run_on_startup",
     "notifications.send"
-  ]
+  ],
+  "contributes": {
+    "startup": { "activationEvents": ["app.startup"] }
+  }
 }
 ```
 
 ### התנהגות ברירת מחדל
 
-בניגוד לשאר ההרשאות (שמתחילות **מופעלות**), `app.run_on_startup` מתחילה **כבויה** — המשתמש צריך להפעיל אותה בכוונה במסך ההתקנה.
+`app.startup_contributions` מתחילה מופעלת; היא אינה מריצה JavaScript.
+`app.run_on_startup` ו-`app.background_keep_alive` מתחילות כבויות ודורשות אישור מכוון.
 
-במסך ההתקנה יוצג **באנר כתום בולט** שמסביר למשתמש שהתוסף מבקש לרוץ ברקע.
+מסך ההתקנה מציג למשתמש אילו אירועים עשויים להפעיל את התוסף. בקשת keep-alive
+מוצגת בנפרד באדום ומבהירה שהמנוע עשוי להישאר פעיל ללא הגבלת זמן.
 
 ### זיהוי מצב רקע ב-JavaScript
 
@@ -539,7 +576,7 @@ Otzaria.on('plugin.boot', async (payload) => {
   const hasStartupPerm = payload.permissions.includes('app.run_on_startup');
 
   if (isBackground && hasStartupPerm) {
-    // רץ פעם אחת בעת עליית האפליקציה
+    // רץ כשהאירוע המוצהר מעיר את מופע הרקע
     await Otzaria.call('notifications.showInApp', {
       message: 'שלום! התוסף נטען בהצלחה עם עליית אוצריא',
       type: 'success'
@@ -581,14 +618,22 @@ Otzaria.on('plugin.boot', async (payload) => {
 
 > 💡 זהו אותו רעיון של "service worker" בתוספי דפדפן: דף קליל לרקע, נפרד מדף ה-UI.
 
-### מחזור החיים של instance הרקע
+### מחזור החיים של מופע רקע עצל
 
 | מצב | מה קורה |
 |-----|---------|
-| אוצריא נפתחת + הרשאה מאושרת | WebView נסתר נוצר, `plugin.boot` נורה עם `runMode: 'background'` |
+| אוצריא נפתחת | תרומות סטטיות נטענות ללא WebView |
+| אירוע מוצהר + הרשאת רקע מאושרת | WebView נסתר נוצר, `plugin.boot` נורה עם `runMode: 'background'`, ואז האירוע נמסר |
 | המשתמש נכנס ללשונית התוסף | **instance נוסף** נוצר (foreground), ה-background נמשך במקביל |
 | ההרשאה מבוטלת בהגדרות | ה-instance הרקע נסגר מיידית |
+| אין פעילות במשך כ-3 דקות | המופע נסגר, אלא אם אושרה הרשאת keep-alive |
 | התוסף מוסר | שני ה-instances נסגרים |
+
+### תאימות זמנית לתוספים ישנים
+
+בגרסאות 0.9.96–0.9.97, תוסף שמבקש `app.run_on_startup` אך אינו מצהיר על
+`contributes.startup` עדיין נטען בעליית אוצריא ונשאר פעיל לאורך הסשן. המסלול
+הישן יוסר ב-0.9.98; תוסף שלא יעבור להצהרות דקלרטיביות לא יופעל עוד ברקע.
 
 ---
 
@@ -615,7 +660,7 @@ Otzaria.on('plugin.boot', async (payload) => {
 - כדי שתוסף יוכל לגשת ל**אינטרנט** (לשירות מקומי יש מסלול נפרד — ראו בהמשך) חייבות להתקיים **שלוש שכבות** במצטבר:
   1. **הצהרה במניפסט** — `network.enabled: true`, ההרשאה `network.access`, וגם שה-URL המבוקש יופיע ב-`network.allowlist` של התוסף.
   2. **אישור המשתמש** — המשתמש אישר את הרשאת `network.access` בעת ההתקנה.
-  3. **מקור אמון רשמי של אוצריא** — ה-URL חייב להיות תואם קידומת לערך שמופיע או ב-`pluginNetworkAllowlist` המובנה בקובץ [`lib/plugins/models/plugin_network_allowlist.dart`](../../lib/plugins/models/plugin_network_allowlist.dart), או באותו קובץ בריפו הרשמי של אוצריא ב-GitHub. אישור מה-GitHub נטען לזיכרון בלבד עד סגירת האפליקציה.
+  3. **מקור אמון רשמי של אוצריא** — ה-URL חייב להיות תואם קידומת לערך שמופיע בקובץ [`plugin_network_allowlist.txt`](https://github.com/Otzaria/otzaria/blob/dev/plugin_network_allowlist.txt) שבשורש ריפו אוצריא ב-GitHub, כפי שהוא בענף `dev`. מיזוג עריכה ל-`dev` נכנס לתוקף מיד, בלי release. האישור נטען לזיכרון בלבד עד סגירת האפליקציה.
 - ההתאמה היא **התאמת קידומת מלאה** — אם ברשימה רשום `https://github.com/Otzaria/otzaria-library`, יותרו רק URLs שמתחילים במחרוזת זו (ואחריה `/`, `?`, `#` או סוף המחרוזת). `https://github.com/` או `https://github.com/Otzaria/another-repo` ייחסמו.
 - ה-`network.allowlist` במניפסט הוא **תנאי חובה אך לא תנאי מספיק** — בלי הצהרה במניפסט ה-URL ייחסם, וגם עם הצהרה הוא ייחסם אם אינו מופיע במקור אמון רשמי של אוצריא.
 - אם תוסף מבקש גישה ל-URL שאינו ב-allowlist הגלובלי, יש לפנות למתחזקי אוצריא בבקשה להוסיף אותו.
@@ -814,6 +859,7 @@ if (typeof Otzaria === 'undefined') {
           typography: { fontFamily: 'Frank Ruhl Libre', fontSize: 18, lineHeight: 1.5,
             commentatorsFontFamily: 'Shofar', commentatorsFontSize: 14 },
         },
+        connectivity: { isOfflineMode: false, hasNetwork: true, isOnline: true },
         permissions: ['app.info.read', 'library.books.read', 'calendar.read',
           'plugin.storage.read', 'plugin.storage.write', 'ui.feedback'],
       },
@@ -1090,6 +1136,24 @@ otzaria://open/plugin/<plugin-id>
 
 ## שגיאות נפוצות
 
+קריאה שנכשלה מחזירה סכמת שגיאה v1. השדות `code` ו־`message` הוותיקים נשמרו, ונוספו שדות שמאפשרים לתוסף להחליט אם להציע ניסיון חוזר:
+
+```javascript
+{
+  success: false,
+  data: null,
+  error: {
+    schemaVersion: 1,
+    code: 'error.highlight_not_found',
+    message: 'Highlight was not found',
+    retryable: false,
+    category: 'not_found'
+  }
+}
+```
+
+`category` הוא אחד מהערכים `permission`,‏ `validation`,‏ `not_found`,‏ `conflict`,‏ `timeout`,‏ `too_large`,‏ `internal` או `unsupported`. מטעמי תאימות, שגיאת הרשאה כללית עשויה עדיין להחזיר את הקוד הוותיק `permission_denied`; הקטגוריה שלה תמיד `permission`.
+
 | קוד שגיאה | סיבה | פתרון |
 |-----------|------|--------|
 | `permission_denied` | הרשאה לא הוצהרה ב-manifest או לא אושרה | הוסף לרשימת `permissions` ב-manifest |
@@ -1097,6 +1161,16 @@ otzaria://open/plugin/<plugin-id>
 | `error.timeout` | הפעולה לא הושלמה תוך 30 שניות | חלק לפעולות קטנות יותר |
 | `error.invalid_params` | פרמטרים חסרים או שגויים | בדוק את החתימה של ה-method |
 | `error.internal` | שגיאה פנימית בצד אוצריא | בדוק לוגים בהגדרות → תוספים |
+
+---
+
+## מגבלות Highlights בגרסה הנוכחית
+
+- ההדגשות זמניות בזיכרון. התוסף אחראי לשמור אותן ב־storage שלו ולהקים אותן מחדש ב־`plugin.boot`.
+- אין בשלב זה סנכרון בין מכשירים, undo/redo מרכזי או פתרון קונפליקטים מרכזי.
+- ה־Host מבודד בעלות לפי מזהה התוסף; תוסף אינו יכול לקרוא, לעדכן או למחוק הדגשות של תוסף אחר.
+- החתימה הוותיקה לפי `index` נשמרת לתאימות, אך תוסף חדש צריך להשתמש ב־`TextRangeAnchor` מתוך `reader.getSelection`.
+- בחירה שחוצה כמה מקטעים אינה נתמכת כעוגן יחיד בשלב זה.
 
 ---
 

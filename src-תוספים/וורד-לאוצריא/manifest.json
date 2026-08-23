@@ -1,0 +1,35 @@
+﻿{
+  "id": "com.otzaria_word_editor.newplugin",
+  "name": "וורד לאוצריא",
+  "version": "1.3.5",
+  "description": "עורך מסמכים בסגנון Word לכתיבת חידושי תורה, עם שילוב מלא עם ספריית אוצריא",
+  "author": "Yeir DANIEL",
+  "type": "webapp",
+  "entrypoint": "index.html",
+  "icon": "",
+  "category": "Utilities",
+  "stability": "beta",
+  "minAppVersion": "0.9.92",
+  "permissions": [
+    "events.subscribe:theme.changed",
+    "plugin.storage.read",
+    "plugin.storage.write",
+    "reader.open",
+    "reader.context_menu",
+    "library.books.read",
+    "search.fulltext.read",
+    "notifications.send",
+    "ui.feedback",
+    "app.info.read"
+  ],
+  "schemaVersion": 1,
+  "sdkVersion": "1.x",
+  "contributes": {
+    "toolTab": {
+      "title": "וורד לאוצריא",
+      "order": 100,
+      "defaultPinned": true,
+      "iconName": "document_text_24_regular"
+    }
+  }
+}
