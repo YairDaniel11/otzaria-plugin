@@ -174,6 +174,8 @@ if (typeof window.Otzaria !== 'undefined' && window.Otzaria.on) {
 /* ===========================================================================
  *  ממשק המשתמש
  * ========================================================================= */
+installHorizontalScrollFix();
+
 const detail = document.getElementById('detail');
 const dcontent = document.getElementById('dcontent');
 const dnav = document.getElementById('dnav');

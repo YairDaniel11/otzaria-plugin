@@ -82,7 +82,7 @@ my-plugin/
   "homepage": "https://example.com/my-plugin",
   "entrypoint": "index.html",
   "icon": "icon/icon.png",
-  "minAppVersion": "5.0.0",
+  "minAppVersion": "0.9.94",
   "sdkVersion": "1.x",
   "permissions": [
     "app.info.read",
@@ -121,6 +121,17 @@ my-plugin/
 | `minAppVersion` | `string` | גרסת אוצריא המינימלית הנתמכת |
 | `sdkVersion` | `string` | גרסת ה-SDK הנדרשת (כעת `"1.x"`) |
 
+`minAppVersion` נאכף משני הכיוונים, ולכן שווה לדייק בו:
+
+- **מלמעלה** — התקנה נדחית אם הערך גבוה מגרסת אוצריא המותקנת. ערך "עתידי" הופך
+  את התוסף לבלתי-מותקן.
+- **מלמטה** — האריזה נדחית אם התוסף קורא ל-API שנוסף בגרסה **מאוחרת** מהערך
+  המוצהר. הגרסה שבה נוספה כל מתודה מופיעה בטבלה שבראש
+  [API_REFERENCE.md](API_REFERENCE.md).
+
+כלומר הערך הנכון הוא הגרסה שבה נוסף ה-API החדש ביותר שהתוסף משתמש בו — לא
+הגרסה האחרונה שיצאה.
+
 ### שדות חובה לצורך העלאה לחנות
 
 בנוסף לשדות החובה הבסיסיים של `manifest.json`, תוסף שמיועד לפרסום בחנות צריך לכלול גם מטא-דאטה שיווקי ותאימות גרסאות.
@@ -131,10 +142,10 @@ my-plugin/
 | `author` | ✓ | שם המפתח או הגוף המפרסם |
 | `description` | ✓ | תיאור קצר של התוסף, מוצג בכרטיס בחנות (עד 150 תווים) |
 | `version` | ✓ | גרסת התוסף |
-| `stability` | ✓ | מצב שחרור: `stable`, `beta`, או `experimental` |
+| `stability` | | מצב שחרור: `stable`, `beta`, או `experimental`. כשהשדה חסר מונח `stable` — אך ערך שאינו אחד השלושה נדחה |
 | `minAppVersion` | ✓ | גרסת אוצריא המינימלית הנתמכת |
 
-אם בעתיד יתווסף ולידטור לחנות, יש להתייחס לשדות אלו כאל דרישות חובה לפרסום ועליהם להיות מדוייקים גם אם חלקם אינם נדרשים לצורך טעינה מקומית במצב פיתוח.
+החנות אוכפת את השדות האלה בהעלאה, וכך גם [ה-Action ל-CI](#פרסום-אוטומטי-ל-ci-github-action). הם חייבים להיות מדויקים גם כשאינם נדרשים לטעינה מקומית במצב פיתוח.
 
 ### שדות אופציונליים
 
@@ -151,20 +162,23 @@ my-plugin/
 | `contributes.toolTab.order` | `900` | סדר הופעה בטאבים (מספר נמוך = קודם) |
 | `contributes.toolTab.allowOrderBeforeBuiltIns` | `false` | חריג מפורש שמאפשר לתוסף להתחרות מול הכלים המובנים ולהופיע לפניהם במסך "כלים" |
 | `contributes.toolTab.defaultPinned` | `true` | האם להצמיד אוטומטית בהתקנה |
-| `contributes.toolTab.iconName` | `null` | שם אייקון FluentUI 24px שיוצג בטאב, למשל `"book_24_regular"` |
+| `contributes.toolTab.iconName` | `null` | שם אייקון 24px שיוצג בטאב, מספריית אוצריא או מ-FluentUI, למשל `"book_24_regular"`. ראה [ICONS.md](ICONS.md) |
 | `contributes.publishedDataTypes` | `[]` | סוגי נתונים שהתוסף מפרסם |
 | `contributes.background.entrypoint` | `null` | נתיב יחסי לקובץ HTML קליל (ללא UI) שייטען ברקע במקום ה-`entrypoint` המלא. רלוונטי רק לתוסף עם `app.run_on_startup`. ראה §ריצת רקע. |
 | `contributes.startup` | `null` | פקדים, פריטי תפריט ונתונים שאוצריא טוענת ישירות מהמניפסט בלי להפעיל WebView. |
 | `contributes.startup.programs` | `[]` | תכניות חישוב Host מוולדות, ללא JavaScript; ראו `API_REFERENCE.md` §תכניות Host ללא WebView. |
 | `contributes.startup.searchDialogItems` | `[]` | שורות checkbox סטטיות; `openPluginOnSubmit` יכול לנתב את אישור החיפוש לתוסף. |
+| `contributes.startup.externalEditions` | `[]` | קונפיגורציית מהדורות מקבילות של ספק חיצוני (טבלת מיפוי במקור DB מוכרז); ראו `API_REFERENCE.md` §מהדורות מקבילות חיצוניות. |
 | `contributes.startup.activationEvents` | `[]` | אירועים שמעירים את מנוע הרקע בעצלנות; כל נושא דורש גם הרשאת subscribe מתאימה. |
 | `contributes.startup.keepAlive` | `false` | בקשה למנוע כיבוי אוטומטי; דורשת אישור נפרד של `app.background_keep_alive`. |
 
 `homepage` הוא שדה אופציונלי, אבל מומלץ מאוד כשמעלים תוסף לחנות. זה המקום לשים קישור לעמוד ה־GitHub של התוסף, לתיעוד, לאתר הפרויקט, או לכל דף רשמי אחר שמסביר על התוסף ונותן למשתמש מקום לקבל מידע נוסף.
 
-`iconName` חייב להיות שם תקני של אייקון FluentUI בגודל 24px, המסתיים ב-`_24_regular` או `_24_filled`. השם נפתר באוצריא ל-`IconData` קבוע באמצעות מפה סטטית, מה שמאפשר ל-Flutter לבצע tree-shaking של פונט האייקונים ב-Release. שמות שאינם נמצאים במפה יוצגו כאייקון פאזל ברירת מחדל.
+`iconName` חייב להיות שם תקני של אייקון בגודל 24px, המסתיים ב-`_24_regular` או `_24_filled`, משתי הספריות שאוצריא מציגה: [ספריית אוצריא](https://github.com/Otzaria/otzaria_icons) (135 אייקונים לעולם התוכן היהודי) ו-[FluentUI System Icons](https://github.com/microsoft/fluentui-system-icons). השם נפתר ל-`IconData` קבוע באמצעות מפות סטטיות — כך ש-Flutter רואה כל אייקון אפשרי כקבוע בזמן בנייה ואינו זקוק ל-codepoint דינמי. שמות שאינם נמצאים באף אחת מהספריות יוצגו כאייקון פאזל ברירת מחדל.
 
-דוגמאות תקפות: `"calendar_24_regular"`, `"calendar_24_filled"`, `"book_24_regular"`, `"settings_24_filled"`.
+שם שקיים בשתי הספריות נפתר לגרסת אוצריא; תחילית `fluent:` או `otzaria:` כופה ספרייה אחת. הרשימה המלאה וכלל ההכרעה: **[ICONS.md](ICONS.md)**.
+
+דוגמאות תקפות: `"calendar_24_regular"`, `"calendar_24_filled"`, `"book_open_tzurat_hadaf_24_regular"`, `"settings_24_filled"`, `"fluent:book_24_regular"`.
 
 `allowOrderBeforeBuiltIns` אינו שדה הרשאות ואינו קשור לאבטחה. זהו דגל מיקום תצוגתי בלבד: כברירת מחדל תוספים מופיעים אחרי הכלים המובנים, גם אם ה-`order` שלהם נמוך יותר. רק אם תוסף מצהיר במפורש על `allowOrderBeforeBuiltIns: true`, המערכת תאפשר לו להופיע לפני כלים מובנים בהתאם ל-`order`.
 
@@ -279,15 +293,20 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 
 > 📘 **תיעוד מלא** של כל method — כולל כל הפרמטרים, ערכי ההחזרה ודוגמאות קוד — נמצא ב-[API_REFERENCE.md](API_REFERENCE.md). הטבלאות כאן הן סיכום מהיר בלבד.
 
+> ⚠️ עמודת **הרשאה** היא שם ההרשאה שיש להצהיר עליה ב-`permissions` — **לא** שם ה-method. שם של method ב-`permissions` נדחה כהרשאה לא חוקית ושובר את ההתקנה. `—` בעמודה פירושו שהקריאה אינה דורשת הרשאה כלל, ואין להצהיר עליה בשום צורה.
+
 ### app.*
 
 | Method | הרשאה | תיאור |
 |--------|-------|--------|
 | `app.getInfo` | `app.info.read` | גרסת האפליקציה, פלטפורמה |
 | `app.getTheme` | `app.info.read` | ערכת נושא מלאה (colorScheme + typography) |
-| `app.getLocale` | `app.info.read` | locale ו-textDirection |
+| `app.getLocale` | `app.info.read` | locale, language ו-textDirection (מ-0.9.97 — לפי שפת הממשק שנבחרה) |
 | `app.openUrl` | `app.open_url` | פתיחת כתובת http/https בדפדפן המערכת |
 | `app.getConnectivity` | `app.info.read` | האם יש אינטרנט — להסתרת יכולות מקוונות |
+| `app.registerShortcut` | `app.shortcuts` | רישום קיצור מקלדת (פקודה / פעולת תפריט הקשר) |
+| `app.unregisterShortcut` | `app.shortcuts` | הסרת קיצור מקלדת |
+| `app.updateShortcut` | `app.shortcuts` | עדכון קיצור מקלדת (key) |
 
 ### library.*
 
@@ -301,13 +320,26 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 | `library.getBookToc` | `library.content.read` | `{ bookId }` | `TocEntry[]` |
 | `library.listBookAltStructures` | `library.content.read` | `{ bookId }` | `AltStructure[]` |
 | `library.getBookAltToc` | `library.content.read` | `{ bookId, structureKey? }` | `TocEntry[]` |
+| `library.getCommentators` | `library.links.read` | `{ bookId, categoryId?, startLine?, endLine?, grouped? }` | `{ commentators }` או `{ groups }` |
+| `library.getLinks` | `library.links.read` | `{ bookId, categoryId?, startLine, endLine, connectionTypes?, targetTitles?, includeAnchors? }` (חלון עד 200 שורות) | `{ links, truncated }` |
+| `library.getRawLinks` | `library.links.read` | `{ bookId, categoryId?, startLine?, endLine?, connectionTypes?, targetTitles? }` (הטווח חובה יחד; חלון עד 1000 שורות) | `{ links, truncated, startLine, endLine }` — אותם קישורים של `getLinks`, בחמשת המפתחות של `links.json` |
+| `library.getLinkTargetsSummary` | `library.links.read` | `{ bookId, categoryId? }` | `{ targets, maxSourceLine }` |
+| `library.getLinkContent` | `library.content.read` | `{ links }` (עד 25) | `{ items }` |
+
+### network.*
+
+| Method | הרשאה | פרמטרים | החזרה |
+|--------|-------|----------|-------|
+| `network.fetchStream` | `network.access` או `network.localhost` | `{ url, method?, headers?, body?, timeoutMs? }` | `AsyncIterable` של metadata ומקטעי UTF-8 |
+| `network.fetch` | כנ״ל | אותם פרמטרים | תגובה מלאה; מיושן ומוסר ב-0.9.98 |
+| `network.download` | כנ״ל | `{ url, filename?, destPath?, resume? }` | נתיב הקובץ שנשמר |
 
 ### search.*
 
 | Method | הרשאה | פרמטרים | החזרה |
 |--------|-------|----------|-------|
 | `search.fullText` | `search.fulltext.read` | `{ query, limit? }` | `SearchResult[]` |
-| `search.query` | `search.fulltext.read` | `{ query, mode?, distance?, proximityScope?, order?, grouping?, wordMatchMode?, options?, wordOptions?, alternativeWords?, customSpacing?, negativeQuery?, categories?, books?, authors?, eras?, baseBooksOnly?, limit?, offset?, includeBookCounts? }` | `{ results, total, groupCount, truncated, facets, bookCounts? }` |
+| `search.query` | `search.fulltext.read` | `{ query, mode?, distance?, proximityScope?, order?, grouping?, wordMatchMode?, options?, wordOptions?, alternativeWords?, customSpacing?, negativeQuery?, categories?, books?, authors?, eras?, baseBooksOnly?, limit?, offset?, includeBookCounts? }` | `AsyncIterable<{ sequence, results, total, groupCount, truncated, facets, bookCounts? }>` |
 | `search.getOptions` | `search.fulltext.read` | `{}` | הערכים החוקיים לכל פרמטר של `search.query` |
 
 ב-`search.query`, גודל עמוד מוגבל ל-500 וחלון הדפדוף (`offset + limit`
@@ -349,6 +381,34 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 | `ui.showConfirm` | `ui.feedback` | `{ title, content }` | `{ confirmed: boolean }` |
 | `ui.showWarning` | `ui.feedback` | `{ title, content, subtitle? }` | `{ confirmed: boolean }` |
 
+### feedback.*
+
+| Method | הרשאה | פרמטרים | החזרה |
+|--------|-------|----------|-------|
+| `feedback.sendEmail` | `feedback.send_email` | `{ to, subject, body, includeSystemInfo? }` | `boolean` |
+| `feedback.report` | — (אישור המשתמש בדיאלוג) | `{ details, reportType?, reporterEmail? }` | `'sent' \| 'queued' \| 'cancelled'` |
+| `feedback.hasReporterEmail` | — (ביט קיום בלבד) | — | `boolean` |
+
+`feedback.report` שולח דיווח של המשתמש על התוסף לאתר אוצריא, שמעביר אותו למפתח התוסף. מוצג דיאלוג אישור חובה; `'queued'` פירושו שהדיווח נשמר בתור מקומי ויישלח אוטומטית כשיהיה חיבור. כתובת לחזרה השמורה בהגדרות גוברת על `reporterEmail`; בדקו קיומה מראש עם `feedback.hasReporterEmail` (הכתובת עצמה אינה נחשפת לתוסף).
+
+### fs.* — המרחב הפרטי (מ-0.9.97)
+
+תיקיית קבצים פרטית לכל תוסף, **בלי שום הרשאה**. כל הנתיבים יחסיים לשורש
+הפרטי, ונתיב שיוצא ממנו (`..`, נתיב מוחלט, UNC, symlink) נדחה ב-`error.forbidden`.
+מכסה 100MB לתוסף, ותקרה של 10MB לקריאה/כתיבה בודדת.
+
+| Method | הרשאה | פרמטרים | החזרה |
+|--------|-------|----------|-------|
+| `fs.writeFile` | — | `{ path, content, encoding?, append? }` | `{ path, size, usedBytes, quotaBytes }` |
+| `fs.readFile` | — | `{ path, encoding? }` | `{ path, encoding, size, content }` |
+| `fs.listDir` | — | `{ path? }` | `{ path, entries, usedBytes, quotaBytes }` |
+| `fs.makeDir` | — | `{ path }` | `boolean` |
+| `fs.deleteEntry` | — | `{ path, recursive? }` | `boolean` |
+| `fs.stat` | — | `{ path? }` | `{ exists, path?, name?, type?, size?, modified? }` |
+
+> אין לבקש `fs.folder_access` בשביל קבצי עבודה — היא ההרשאה הרחבה במערכת,
+> ונועדה לעבודה בתיקייה של המשתמש. הפירוט ב-[API_REFERENCE](API_REFERENCE.md).
+
 ### storage.*
 
 | Method | הרשאה |
@@ -358,6 +418,10 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 | `storage.remove` | `plugin.storage.write` |
 | `storage.list`   | `plugin.storage.read` |
 
+> ⚠️ **שם המסלול שונה משם ההרשאה.** קריאה ל-`plugin.storage.get` אינה קיימת
+> ותיכשל בשקט אם התוסף אינו בודק את `success`. `storage.set` דורש `value`
+> שאינו `null` — למחיקה יש `storage.remove`.
+
 ### settings.*
 
 | Method | הרשאה | פרמטרים |
@@ -365,14 +429,16 @@ Otzaria.on('plugin.suspended', stop);   // עצירת timers / polling / WebSock
 | `settings.get`     | `settings.read` | `{ key }` |
 | `settings.getMany` | `settings.read` | `{ keys: string[] }` |
 
-**מפתחות מותרים:**
-`keyDarkMode`, `keyFollowSystemTheme`, `keySwatchColor`, `keyDarkSwatchColor`,
-`keyFontSize`, `keyFontFamily`, `keyCommentatorsFontFamily`, `keyCommentatorsFontSize`,
-`keyLineHeight`, `keySelectedCity`, `keyCalendarType`, `keyShowTeamim`,
-`keyDefaultNikud`, `keyRemoveNikudFromTanach`, `keyReplaceHolyNames`,
-`keyLibraryViewMode`, `keyAlignTabsToRight`, `keyCopyWithHeaders`, `keyCopyHeaderFormat`
+**מ-0.9.97 כל הגדרה קריאה, למעט רשימת חסומים** (עד אז הייתה רשימת היתר סגורה).
+חסומים: כל מפתח שבשמו `password` / `secret` / `credential` / `token` /
+`api-key` / `client-id`, כל מפתח שבשמו `path` / `folder` / `root` (נתיבים,
+כולל `key-hebrew-books-path` שהיה מותר עד 0.9.96), כל מפתח שבשמו `email`,
+וכן `key-google-calendar-*`, `key-calendar-event*`, `key-protected-mode-*`,
+`sz:*` ותוכן אישי (`key-bookmarks`, `key-tabs`, `key-workspaces` ודומיהם).
+הפירוט המלא ב-[API_REFERENCE](API_REFERENCE.md#settings---הגדרות-אפליקציה).
 
-> ⚠️ מפתחות לא-מורשים (סיסמאות, נתיבים, credentials) יחזירו `null` ולא ישלחו שגיאה.
+> ⚠️ `settings.get` על מפתח חסום מחזיר `error.forbidden` (מ-0.9.97; קודם החזיר
+> `null` בשקט). `settings.getMany` מדלג עליו — הוא חסר מהמפה המוחזרת.
 
 ### calendar.*
 
@@ -496,7 +562,17 @@ const { data: keys } = await Otzaria.call('storage.list');
 
 התוסף מצהיר על ההרשאות שלו ב-manifest. בעת התקנה, המשתמש רואה את ההרשאות ומאשר.
 
+### הרשאות בסיס (מ-0.9.97 — אין צורך להצהיר)
+
+ההרשאות הבאות ניתנות **אוטומטית לכל תוסף**, אינן מוצגות למשתמש, והצהרה עליהן
+במניפסט מיותרת (נסבלת לתאימות לאחור, עם אזהרת ולידטור):
+
+`plugin.storage.read` · `plugin.storage.write` · `app.info.read` ·
+`ui.feedback` · `notifications.send` · `events.subscribe:theme.changed`
+
 ### רשימת ההרשאות המלאה
+
+שש ההרשאות שברשימה למעלה נכללות גם כאן לשם השלמות — אין צורך להצהיר עליהן.
 
 | הרשאה | מה מאפשרת |
 |-------|-----------|
@@ -504,26 +580,35 @@ const { data: keys } = await Otzaria.call('storage.list');
 | `app.open_url` | פתיחת קישור http/https בדפדפן ברירת המחדל של מערכת ההפעלה |
 | `library.books.read` | חיפוש וקריאת metadata של ספרים |
 | `library.content.read` | קריאת תוכן ספרים (TOC + טקסט) |
+| `library.links.read` | קריאת מפרשים וקישורים של ספר (מבנה בלבד, ללא תוכן) |
 | `search.fulltext.read` | חיפוש טקסט מלא |
 | `reader.open` | פתיחת ספרים + קריאת מצב הקורא |
 | `navigation.write` | ניווט בין מסכים |
+| `plugin.open_other` | פתיחת דף של תוסף אחר המותקן אצל המשתמש (`plugin.openOther`), כולל הפעלת הקוד שלו |
 | `notes.read` | קריאת הערות אישיות |
 | `notes.write` | הוספה/עדכון/מחיקה של הערות |
 | `calendar.read` | גישה לנתוני לוח שנה |
-| `settings.read` | קריאת הגדרות מהרשימה המותרת |
-| `plugin.storage.read` | קריאת storage פרטי |
-| `plugin.storage.write` | כתיבה ל-storage פרטי |
+| `settings.read` | קריאת הגדרות התוכנה (הכל למעט רשימת החסומים — סודות, נתיבים, מייל ותוכן אישי) |
+| `plugin.storage.read` | קריאת storage פרטי — ⚠️ המסלולים הם `storage.get`/`storage.list`, **לא** `plugin.storage.*` |
+| `plugin.storage.write` | כתיבה ל-storage פרטי — ⚠️ המסלולים הם `storage.set`/`storage.remove` |
 | `published_data.write` | פרסום נתונים לאפליקציה |
 | `ui.feedback` | הצגת הודעות ודיאלוגים |
 | `ui.create_shortcut` | יצירת קיצור דרך (deep-link) בשולחן העבודה / תפריט ההתחל — דורש אישור משתמש |
 | `network.access` | גישה לאינטרנט (דורש `network.enabled: true` במניפסט + שה-URL מופיע ב-allowlist הרשמי של אוצריא ב-GitHub) |
 | `network.localhost` | גישה לשירות מקומי על המחשב (`localhost` / `127.0.0.1`), כמו Ollama / LM Studio. נפרדת מ-`network.access` — אינה מתירה אינטרנט, ואינה דורשת allowlist גלובלי |
 | `fs.user_files.read` | בחירה וקריאה של קובץ אישי (PDF/טקסט) שהמשתמש בוחר בדיאלוג — מוגבל לקובץ שנבחר בלבד |
+| `fs.user_files.write` | שמירה לקובץ שהמשתמש בחר, או יצירת קובץ חדש דרך „שמור בשם”. אין דרך להזין נתיב מה-JS |
+| `fs.folder_access` | בחירת תיקייה בדיאלוג מערכת (`ui.pickFolder`) ועבודה על קבצים בתוכה. מ-0.9.97 — פוצלה מ-`ui.feedback`; הצהרה ותיקה על `ui.feedback` עדיין מכסה אותה. **לקבצי עבודה השתמשו במרחב הפרטי (`fs.writeFile` וחבריו) — הוא אינו דורש הרשאה** |
+| `bookmarks.read` | קריאת רשימת הסימניות של המשתמש |
+| `bookmarks.write` | הוספה ומחיקה של סימניות |
+| `tools.read` | כלי העזר המובנים — גימטריה ומילוני ראשי תיבות/ארמית (`tools.*`) |
 | `notifications.send` | הצגת הודעות בתוך האפליקציה (UiSnack) |
 | `notifications.system` | התראות מערכת הפעלה (Native notifications) |
 | `app.run_on_startup` | **הרשאה רגישה** — הפעלת WebView ברקע לפי אירוע שהוצהר ב-`contributes.startup`. ברירת מחדל: **כבויה**. בתוסף ישן ללא `contributes.startup`, מפעילה זמנית בעליית אוצריא עד 0.9.97. |
 | `app.background_keep_alive` | **הרשאה רגישה מאוד** — מניעת כיבוי אוטומטי של WebView רקע עצל. דורשת `startup.keepAlive: true`; כבויה כברירת מחדל ומוצגת באדום. |
 | `app.startup_contributions` | הזרקת פקדים ונתונים סטטיים מהמניפסט בלי להפעיל את התוסף. ברירת מחדל: **מופעלת**. |
+| `app.shortcuts` | רישום קיצורי מקלדת לתוסף (במניפסט `contributes.startup.shortcuts` או בזמן ריצה `app.registerShortcut`) — הפעלת פקודות שלו או פעולות תפריט הלחיצה הימנית. הקיצורים נשלטים במסך הגדרות קיצורי המקשים. |
+| `clipboard.read` | קריאת לוח ההעתקה של מערכת ההפעלה מתוך הדף (`navigator.clipboard.read` / `readText`). **הרשאת דפדפן, לא RPC** — ראו „קריאת לוח ההעתקה”. ברירת מחדל: **כבויה**. מ-0.9.97 |
 
 > **עיקרון מינימום הרשאות:** בקש רק את מה שאתה צריך בפועל.
 
@@ -640,12 +725,57 @@ Otzaria.on('plugin.boot', async (payload) => {
 ## אבטחה ומגבלות
 
 ### Rate limiting
-- מקסימום **100 קריאות לשנייה** לתוסף
-- חריגה מחזירה `{ success: false, error: { code: "error.rate_limited" } }`
+
+המגביל הוא **דלי אסימונים**, לא מכסה לשנייה:
+
+- **קיבולת הדלי: 50 אסימונים.** כל קריאה צורכת אחד.
+- **קצב המילוי: אסימון כל 10ms** — כלומר 100 קריאות לשנייה בקצב מתמשך.
+- חריגה מחזירה `{ success: false, error: { code: "error.rate_limited" } }`.
+
+שני המספרים חיים יחד, וזו ההשלכה המעשית: פרץ של 60 קריאות בבת אחת ייכשל
+בקריאה ה-51 — **גם אם חלפה שנייה שלמה מאז הקריאה הקודמת**, כי הדלי אינו
+מתמלא מעבר ל-50. תוסף שמנפיק פרצים גדולים חייב לפזר אותם בזמן.
+
+**שתי החרגות מהמגביל:**
+
+1. `library.getBookContent` — היא מחולקת ל-chunks של 5000 תווים, כך שספר
+   שלם מחייב עשרות קריאות רצופות. **המלכוד:** ההחרגה חלה רק כאשר ההרשאה
+   `library.content.read` **הוענקה בפועל**, לא כשהוצהרה במניפסט. תוסף
+   שההרשאה שלו כבויה יעבור דרך המגביל ועלול לקבל `error.rate_limited`
+   במקום `permission_denied` המצופה — אל תסיקו מהקוד הזה שהקריאה תקינה.
+2. **ביטול stream** — קריאת ביטול של `search.query` או של
+   `network.fetchStream` אינה נספרת, כדי שתמיד ניתן יהיה לעצור.
 
 ### Timeout
-- כל קריאת `Otzaria.call()` חייבת להסתיים תוך **30 שניות**
-- חריגה מחזירה `error.timeout`
+- כברירת מחדל, קריאת `Otzaria.call()` נחתכת אחרי **30 שניות** ומחזירה
+  `error.timeout`.
+- **שישה מסלולים מוחרגים** ומנהלים חסם זמן משלהם — הם עשויים להמתין ללא
+  הגבלה מצד ה-RPC: `search.query`,‏ `network.fetch`,‏ `network.fetchStream`,‏
+  `network.download`,‏ `fs.extractZip` ו-`feedback.report`.
+- **אל תעטפו אותם ב-timeout עצמי של 30 שניות.** `feedback.report` וכל פעולה
+  שממתינה לדיאלוג ממתינות למשתמש; ביטול מצד התוסף יקטע פעולה שהמשתמש
+  באמצע אישורה, ובמקרה של דיווח — אחרי שכבר נשלח.
+- שאילתות `database.*` הן מקרה נפרד: להן חסם משלהן של 3 שניות שמחזיר
+  `database.query_timeout` (ראו API_REFERENCE).
+
+### מפתחות ושמות שמורים
+
+ה-SDK משתמש בכמה שמות בתוך ה-payload ובמרחב האירועים של הדף. שימוש חוזר
+בהם **אינו מחזיר שגיאה** — הוא פשוט משבש את הזרימה בשקט:
+
+- **`__streamId`** ו-**`__cancelStreamId`** — ה-SDK מזריק אותם ל-payload של
+  `search.query` ושל `network.fetchStream` כדי לשייך chunks לזרם ולבטל אותו.
+  שדה משלכם באותו שם ידרוס אותם.
+- **`__otzaria.*`** — נושאי ה-`CustomEvent` שבהם ה-chunks מגיעים ל-דף
+  (`__otzaria.search.query.chunk`,‏ `__otzaria.network.fetchStream.chunk`).
+  אל תשלחו ואל תיירטו אירועים בקידומת הזאת.
+
+### `window.open` מנוטרל
+
+מטעמי אבטחה `window.open` מוחלף בפונקציה שמדפיסה לקונסולה ומחזירה `null`.
+היא **אינה זורקת**, ולכן ספריית צד-שלישי שנשענת עליה (פתיחת חלון תצוגה,
+הדפסה, OAuth popup) תיכשל בלי חריגה ובלי סימן. לפתיחת קישור חיצוני יש
+`app.openUrl` (הרשאה `app.open_url`).
 
 ### גישת קבצים
 התוסף יכול לטעון רק קבצים מ:
@@ -665,10 +795,30 @@ Otzaria.on('plugin.boot', async (payload) => {
 - ה-`network.allowlist` במניפסט הוא **תנאי חובה אך לא תנאי מספיק** — בלי הצהרה במניפסט ה-URL ייחסם, וגם עם הצהרה הוא ייחסם אם אינו מופיע במקור אמון רשמי של אוצריא.
 - אם תוסף מבקש גישה ל-URL שאינו ב-allowlist הגלובלי, יש לפנות למתחזקי אוצריא בבקשה להוסיף אותו.
 
-**שירותים מקומיים (localhost):** גישה ל-`localhost` / `127.0.0.1` / `::1` (למשל מודל שפה מקומי כמו Ollama / LM Studio) משתמשת בהרשאה הנפרדת **`network.localhost`** — לא `network.access`. מסלול זה **אינו** דורש את שכבה 3 (allowlist גלובלי / PR לאוצריא); די בשלושה: `network.enabled: true`, הצהרת היעד ב-`network.allowlist` של התוסף (מותר host חשוף כמו `"127.0.0.1"` שמתיר כל פורט, או URL מלא שנועל לפורט מסוים), ואישור המשתמש להרשאת `network.localhost`. הקריאות חייבות לעבור דרך `network.fetch` (לא `fetch()` ישיר מה-WebView — הוא נחסם ב-CORS מול שרת מקומי שדוחה `Origin: null`).
+**שירותים מקומיים (localhost):** גישה ל-`localhost` / `127.0.0.1` / `::1` (למשל מודל שפה מקומי כמו Ollama / LM Studio) משתמשת בהרשאה הנפרדת **`network.localhost`** — לא `network.access`. מסלול זה **אינו** דורש את שכבה 3 (allowlist גלובלי / PR לאוצריא); די בשלושה: `network.enabled: true`, הצהרת היעד ב-`network.allowlist` של התוסף (מותר host חשוף כמו `"127.0.0.1"` שמתיר כל פורט, או URL מלא שנועל לפורט מסוים), ואישור המשתמש להרשאת `network.localhost`. הקריאות חייבות לעבור דרך `network.fetchStream` (לא `fetch()` ישיר מה-WebView — הוא נחסם ב-CORS מול שרת מקומי שדוחה `Origin: null`).
 
 ### window.open
 חסום לחלוטין מטעמי אבטחה.
+
+### זום דפדפן
+זום ברמת הדפדפן **מבוטל** בטאב של תוסף — גם צביטת מגע (Page Scale) וגם Ctrl+גלגלת / Ctrl+מינוס-פלוס. הסיבה: מחוות זום של הדפדפן משנות את הסקאלה של כל התוסף בלי דרך גלויה למשתמש לאפס אותה.
+
+זה **לא** מגביל זום שהתוסף מממש בעצמו: אירועי המגע והגלגלת ממשיכים להגיע לדף כרגיל, כך שקנבס או תצוגה עם pinch-zoom משלכם (האזנה ל-pointer/touch events, בדרך כלל עם `touch-action: none` על האלמנט) עובדים ללא הפרעה — ואף בלי תחרות מצד זום הדפדפן על אותה מחווה.
+
+### קריאת לוח ההעתקה
+
+דף התוסף נטען מ-`file://`, ושם `navigator.clipboard.read()` ו-`readText()` **נדחים** — לא בגלל הקשר לא-מאובטח (`isSecureContext` הוא `true`) אלא בגלל הרשאת ה-`clipboard-read` של הדפדפן. אוצריא מעניקה אותה רק לתוסף שהצהיר על `clipboard.read` במניפסט **ושהמשתמש אישר** לו אותה; ברירת המחדל כבויה, והמשתמש יכול לכבות בכל עת. כל בקשת הרשאה אחרת של הדף — מצלמה, מיקרופון, מיקום, גופנים מקומיים — נדחית, ואין הרשאת מניפסט שפותחת אותה.
+
+```jsonc
+{ "permissions": ["clipboard.read"], "minAppVersion": "0.9.97" }
+```
+
+שימו לב לשתי נקודות:
+
+* **אין `clipboard.*` ב-`Otzaria.call`.** זו הרשאת דפדפן ולא מסלול RPC: היא נאכפת ב-`onPermissionRequest` של ה-WebView, ומה שהתוסף קורא לו הוא ה-API הרגיל של הדפדפן.
+* **כתיבה ללוח אינה דורשת אותה.** `navigator.clipboard.write()` / `writeText()` עובדים תחת מחווה של המשתמש בלי הרשאה, וכך גם Ctrl+C / Ctrl+X / Ctrl+V — הדפדפן מטפל בהם בעצמו עם ה-`dataTransfer` של האירוע. ההרשאה נדרשת רק כדי **לקרוא** את הלוח ביוזמת הקוד, למשל בכפתור „הדבק” בסרגל של עורך.
+
+דחייה נרשמת בלוג הריצה של התוסף עם שם ההרשאה שחסרה, כך שאפשר לאבחן אותה בלי לנחש.
 
 ---
 
@@ -753,14 +903,29 @@ function renderAbout() {
 | **טעינה מתיקייה** | תוספים פשוטים — HTML/CSS/JS ישיר ללא bundler |
 | **טעינה משרת localhost** | תוספים עם Vite / webpack — מקבלים HMR (החלפת מודול בזמן אמת) |
 
+### הפעלת כלי הפיתוח
+
+כפתורי הפיתוח (טעינת תיקייה, localhost, רענון) מופיעים בפאנל "תוספים" ובפאנל "כלים ותוספים" באחד משני מצבים:
+
+- **הרצת אוצריא במצב debug** (דרך IDE או `flutter run`) — הכפתורים מופיעים תמיד.
+- **גרסה רגילה (מותקנת) עם דגל ההפעלה `--dev-plugins`**:
+
+  ```
+  otzaria.exe --dev-plugins
+  ```
+
+  טיפ: צרו קיצור דרך ייעודי עם הדגל בשדה Target — "אוצריא למפתחים" בלחיצה אחת.
+
+> **שימו לב:** אוצריא היא single-instance. אם אוצריא כבר רצה בלי הדגל, הפעלה נוספת עם הדגל רק תמקד את החלון הקיים — סגרו את אוצריא והפעילו מחדש דרך הקיצור.
+
 ---
 
 ### שיטה א: טעינה מתיקייה מקומית
 
-1. **סביבת הרצה**: הריצו את אוצריא במצב debug (דרך IDE או `flutter run`).
+1. **סביבת הרצה**: הפעילו את כלי הפיתוח (מצב debug או דגל `--dev-plugins`, ראו למעלה).
 2. **טעינת התיקייה**:
    - פתחו את פאנל "תוספים" באוצריא.
-   - לחצו על אייקון התיקייה בסרגל העליון (יופיע רק במצב debug).
+   - לחצו על אייקון התיקייה בסרגל העליון.
    - בחרו את התיקייה שבה ממוקם `manifest.json`.
 3. **סמל DEV**: התוסף יופיע עם תג `DEV`.
 
@@ -785,7 +950,7 @@ function renderAbout() {
    ```
 
 2. **טען משרת localhost**:
-   - פתחו את פאנל "תוספים" באוצריא (במצב debug).
+   - פתחו את פאנל "תוספים" באוצריא (עם כלי הפיתוח פעילים — ראו למעלה).
    - לחצו על אייקון הגלובוס בסרגל העליון.
    - הכניסו את כתובת השרת (ברירת מחדל: `http://localhost:3000`).
 
@@ -845,7 +1010,7 @@ if (typeof Otzaria === 'undefined') {
     window.dispatchEvent(new CustomEvent('plugin.boot', {
       detail: {
         plugin: { id: 'dev', version: '0.0.0' },
-        app: { version: '5.0.0', platform: 'dev', locale: 'he-IL', textDirection: 'rtl' },
+        app: { version: '0.9.96', platform: 'dev', locale: 'he-IL', textDirection: 'rtl' },
         theme: {
           mode: 'light',
           colorScheme: {
@@ -949,7 +1114,20 @@ dart tool/plugins/package_plugin.dart <path/to/your/plugin/folder> [--force]
      - `network.access` או `network.enabled` בלי `network.allowlist` מפורט — אזהרה בלבד; בפועל ה-URLים חייבים להופיע גם במניפסט וגם במקור אמון רשמי של אוצריא בזמן ריצה.
    - **`design`** — דו"ח תאימות ל־[DESIGN_GUIDE.md](DESIGN_GUIDE.md): דורש `<html lang="he" dir="rtl">`, ניצול CSS variables (`var(--color-*)`, `var(--font-*)`, `var(--radius-*)`), ואיסור hex/rgb/named colors מחוץ להגדרות `:root`. גם זה אינו חוסם אריזה — נועד לעזור למפתח לוודא שהתוסף משתלב באוצריא.
 
-3. **אריזה** — `.otzplugin` (ZIP) עם כל קבצי התיקייה, פרט לתיקיות פיתוח (`.git/`, `node_modules/`, `.idea/`, `.vscode/`, `__pycache__/`, `.claude/`…) ולקבצים שהוחרגו ע"י `.otzignore` (ראו למטה). אם נתיב הפלט יושב בתוך התיקייה הנארזת, הקובץ מוחרג מהארכיון כדי שלא ייכלל בעצמו.
+3. **אריזה** — `.otzplugin` (ZIP) עם כל קבצי התיקייה, פרט לתיקיות פיתוח (`.git/`, `node_modules/`, `.idea/`, `.vscode/`, `__pycache__/`, `.claude/`…), לקבצי מטא-דאטה של המאגר (ראו למטה) ולקבצים שהוחרגו ע"י `.otzignore`. אם נתיב הפלט יושב בתוך התיקייה הנארזת, הקובץ מוחרג מהארכיון כדי שלא ייכלל בעצמו.
+
+### קבצי מטא-דאטה מוחרגים אוטומטית
+
+כדי שהארכיון יכיל רק מה שנדרש בזמן ריצה, מוחרגים אוטומטית גם: קבצי `*.md`, `LICENSE*`/`LICENCE*`, קבצים נסתרים (`.env`, `.DS_Store`…), קובצי lock (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`), וכן התיקיות `.github/`, `screenshots/` וכל תיקייה נסתרת.
+
+> ⚠️ **אם התוסף טוען אחד מהם בזמן ריצה** (למשל `fetch('help.md')` או `<img src="screenshots/demo.png">`) — הקובץ לא ייכלל בארכיון והבקשה תיכשל ב-404 אצל המשתמש. החזירו אותו במפורש בכלל `!` ב-`.otzignore`:
+>
+> ```gitignore
+> !help.md
+> !screenshots/demo.png
+> ```
+>
+> כלל `!` מפורש **גובר** על החרגת המטא-דאטה. תיקיות פיתוח (`.git/`, `node_modules/`…) חסומות מוחלט ו-`!` אינו פותח אותן. מספר קבצי המטא-דאטה שהוחרגו מודפס בסיום האריזה, כדי שההחרגה לא תהיה שקטה.
 
 ### החרגת קבצים נוספים (`.otzignore`)
 
@@ -978,7 +1156,7 @@ build/**
 - `/` בסוף = תיקייה בלבד; `/` בתוך התבנית מעגן אותה לשורש התוסף; בלי `/` ההתאמה לפי שם הקובץ בכל עומק.
 - `!` בתחילת שורה מחזיר נתיב שהוחרג ע"י כלל קודם (הכלל האחרון שמתאים קובע).
 - ה-`.otzignore` עצמו לעולם לא נארז; מספר הקבצים שהוחרגו מודפס בסיום (`קבצים: N, M מוחרגים`).
-- אם כלל מחריג בטעות את ה-`entrypoint`, האריזה נכשלת עם שגיאה ברורה (במקום לייצר תוסף שבור).
+- אם כלל מחריג בטעות את ה-`entrypoint` (או את נקודת הכניסה לרקע), האריזה נכשלת עם שגיאה ברורה (במקום לייצר תוסף שבור). זה תקף גם ל-entrypoint שהוא קובץ מטא-דאטה — החזירו אותו בכלל `!`.
 
 החרגה זו פועלת באופן זהה גם ב-`otzaria pack-plugin`/סקריפט ה-`tool/` וגם ב-[Action הרשמי ל-CI](#פרסום-אוטומטי-ל-ci-github-action).
 
@@ -1022,9 +1200,7 @@ Rename-Item .\my-plugin.zip my-plugin.otzplugin
 מאמת את התוסף (אותן בדיקות בדיוק כמו בחנות), בונה את ה-`.otzplugin`, ו**מפרסם אותו לחנות**
 אוטומטית — מזהה את התוסף לפי ה-`id` שב-`manifest.json`, כך שאין צורך לדעת מזהים פנימיים.
 
-### Workflow מינימלי
-
-הוסיפו לריפו של התוסף את `.github/workflows/release.yml`:
+Workflow מינימלי, ב-`.github/workflows/release.yml`:
 
 ```yaml
 name: Publish plugin
@@ -1043,73 +1219,16 @@ jobs:
           otzaria-password: ${{ secrets.OTZARIA_PASSWORD }}
 ```
 
-זה הכל. כל `push` ל-`main` שמעלה את `version` ב-`manifest.json` → מאמת, בונה, ומפרסם.
+מגדירים את `OTZARIA_USER`/`OTZARIA_PASSWORD` כ-Secrets בריפו של התוסף
+(`Settings → Secrets and variables → Actions`) — ומכאן כל `push` ל-`main` שמעלה `version`
+ב-`manifest.json` מאמת, בונה ומפרסם אוטומטית. בלי הסודות ה-Action רק מאמת, בלי לפרסם —
+מצוין כבדיקת PR; מטעמי אבטחה, פרסום לחנות **לעולם לא רץ** באירוע `pull_request`.
 
-### הסודות שיש להגדיר
-
-ב-`Settings → Secrets and variables → Actions` בריפו של התוסף:
-
-| Secret | מה זה |
-|---|---|
-| `OTZARIA_USER` | האימייל / שם המשתמש של חשבון החנות שלכם (יוצר התוסף). |
-| `OTZARIA_PASSWORD` | הסיסמה לאותו חשבון. |
-
-**אין צורך במזהה תוסף** — הוא נפתר אוטומטית מה-`id` שב-`manifest.json`.
-
-### מה חשוב לדעת
-
-- **זיהוי לפי `manifest.id`**: התוסף מזוהה לפי ה-`id` שלו. שנו אותו — והחנות תראה תוסף אחר.
-- **חובה עליית גרסה**: כל פרסום מחייב `version` גבוה מהקיים בחנות (אחרת הריצה מדלגת/נכשלת).
-- **אישור מנהל**: עדכון של בעלים נכנס כ"ממתין לאישור"; הגרסה הקודמת ממשיכה בחנות עד שמנהל מאשר.
-- **דחיפה ראשונה (תוסף חדש)**: החנות מחייבת לפחות צילום מסך אחד. ספקו אותו בקלט `screenshots`:
-  ```yaml
-      - uses: Otzaria/otzaria-plugin-validator@v1
-        with:
-          otzaria-user: ${{ secrets.OTZARIA_USER }}
-          otzaria-password: ${{ secrets.OTZARIA_PASSWORD }}
-          screenshots: screenshots/main.png
-  ```
-- **בטיחות**: הפרסום **לעולם לא רץ ב-`pull_request`** (כדי שלא ידלפו סודות מ-fork). בלי הסודות
-  ה-Action רק מאמת — מצוין כבדיקת PR.
-- **קלטים אופציונליים**: `fail-on-warnings` (אזהרות מפילות), `force` (פרסום מחדש של אותה גרסה),
-  `sync-metadata` (סנכרון שדות מה-manifest, פעיל כברירת מחדל).
-
-### החרגת קבצים מהבנייה (`.otzignore`)
-
-ה-Action כבר מחריג אוטומטית תיקיות פיתוח (`node_modules/`, `.git/`…), קובצי מטא-דאטה
-(`README`, `LICENSE`, קבצי `.md`, dotfiles) ותיקיות כמו `.github/` ו-`screenshots/`.
-כדי להחריג קבצים נוספים שאין בהם צורך בזמן ריצה (מקורות גולמיים, source maps, נתונים
-גדולים), הוסיפו קובץ **`.otzignore`** בשורש תיקיית התוסף. התחביר זהה ל-`.gitignore`:
-
-```gitignore
-# הערות מותרות בתחילת שורה בלבד (כמו .gitignore) — לא בסוף שורת תבנית
-
-# glob לפי שם הקובץ בכל עומק
-*.map
-
-# תיקייה שלמה (וכל מה שתחתיה)
-src/
-
-# נתיב מעוגן לשורש התוסף
-data/raw.json
-
-# ** חוצה מפרידי נתיב
-build/**
-
-# ! מחזיר קובץ שהוחרג ע"י כלל קודם
-!src/keep.js
-```
-
-- `*` מתאים בתוך מקטע נתיב יחיד, `**` חוצה מקטעים, `?` תו בודד.
-- `/` בסוף = תיקייה בלבד; `/` בתוך התבנית מעגן אותה לשורש התוסף; בלי `/` ההתאמה לפי שם הקובץ בכל עומק.
-- `!` בתחילת שורה מחזיר נתיב שהוחרג ע"י כלל קודם (הכלל האחרון שמתאים קובע).
-- ה-`.otzignore` עצמו לעולם לא נארז; מספר הקבצים שהוחרגו נכתב ללוג הבנייה.
-
-ההחרגה משפיעה רק על **בניית ה-`.otzplugin`** — אל תחריגו את ה-`entrypoint` או נכסים שהוא טוען
-(אם בכל זאת תנסו, האריזה תיכשל עם שגיאה ברורה). אותו קובץ `.otzignore` נכבד גם ע"י האריזה המקומית
-[`otzaria pack-plugin`](#אריזה-והפצה--יצירת-קובץ-otzplugin), כך שה-CI והאריזה הידנית מחריגים בדיוק אותם קבצים.
-
-תיעוד מלא של כל הקלטים והפלטים: ב-README של [המאגר](https://github.com/Otzaria/otzaria-plugin-validator).
+כל השאר מתועד במלואו, ומתעדכן ראשון, ב-README של
+[המאגר עצמו](https://github.com/Otzaria/otzaria-plugin-validator#readme): רשימת כל
+הקלטים/פלטים, אימות מקומי לפני דחיפה (כולל git hook מוכן), תגובת סיכום אוטומטית שמתעדכנת
+על ה-PR, החרגת קבצים מהבנייה עם `.otzignore`, ומה בדיוק קורה מול חנות (אישור מנהל, עדכון
+גרסה, ההבדל בין יוצר למנהל).
 
 ---
 
@@ -1152,15 +1271,18 @@ otzaria://open/plugin/<plugin-id>
 }
 ```
 
-`category` הוא אחד מהערכים `permission`,‏ `validation`,‏ `not_found`,‏ `conflict`,‏ `timeout`,‏ `too_large`,‏ `internal` או `unsupported`. מטעמי תאימות, שגיאת הרשאה כללית עשויה עדיין להחזיר את הקוד הוותיק `permission_denied`; הקטגוריה שלה תמיד `permission`.
+`category` הוא אחד מהערכים `permission`,‏ `validation`,‏ `not_found`,‏ `conflict`,‏ `timeout`,‏ `too_large`,‏ `internal` או `unsupported`. מטעמי תאימות, שגיאת הרשאה כללית עשויה עדיין להחזיר את הקוד הוותיק `permission_denied`; הקטגוריה שלה תמיד `permission`, וכך גם של `error.forbidden`. `error.unknown_method` ו-`error.unavailable` מקבלים `unsupported`.
 
 | קוד שגיאה | סיבה | פתרון |
 |-----------|------|--------|
 | `permission_denied` | הרשאה לא הוצהרה ב-manifest או לא אושרה | הוסף לרשימת `permissions` ב-manifest |
-| `error.rate_limited` | יותר מ-100 קריאות/שניה | הוסף debounce/throttle לקוד |
+| `error.rate_limited` | דלי של 50 אסימונים התרוקן (מילוי: אסימון כל 10ms) | הוסף debounce/throttle, ופזר פרצים גדולים בזמן |
 | `error.timeout` | הפעולה לא הושלמה תוך 30 שניות | חלק לפעולות קטנות יותר |
 | `error.invalid_params` | פרמטרים חסרים או שגויים | בדוק את החתימה של ה-method |
 | `error.internal` | שגיאה פנימית בצד אוצריא | בדוק לוגים בהגדרות → תוספים |
+| `error.forbidden` | הפעולה נחסמה גם כשההרשאה קיימת (נתיב מחוץ לתיקייה מאושרת, תיקייה מוגנת, URL שאינו ב-allowlist) | תקן את היעד או בקש מהמשתמש תיקייה אחרת |
+| `error.unknown_method` | שם ה-method אינו קיים במארח הזה | בדוק איות, והעלה את `minAppVersion` אם ה-API חדש |
+| `error.unavailable` | ה-API קיים אך אינו זמין בהקשר הנוכחי (אין טאב קריאה פעיל, שירות כבוי) | בדוק את ההקשר לפני הקריאה |
 
 ---
 
@@ -1187,6 +1309,7 @@ otzaria://open/plugin/<plugin-id>
 | [`API_REFERENCE.md`](API_REFERENCE.md) | תיעוד מלא של כל ה-API — כל method עם פרמטרים, ערכי החזרה ודוגמאות |
 | [`DESIGN_GUIDE.md`](DESIGN_GUIDE.md) | מדריך עיצוב מלא — Color Roles, צורות, טיפוגרפיה, כפתורים, כרטיסים ואנימציות |
 | [`COOKBOOK.md`](COOKBOOK.md) | מתכוני קוד מעשיים — גופן מותאם אישית, אייקונים מאוצריא, וחלונית הגדרות בסגנון "לוח שנה" |
+| [`ICONS.md`](ICONS.md) | ספריות האייקונים הזמינות לתוסף — 135 אייקוני אוצריא, כלל ההכרעה מול פלואנט, והתחיליות `otzaria:` / `fluent:` |
 | [`otzaria_plugin.d.ts`](otzaria_plugin.d.ts) | הגדרות TypeScript עבור האובייקט הגלובלי `Otzaria`. ניתן לכלול בפרויקטי TypeScript של תוספים לקבלת השלמה אוטומטית (autocomplete) ב-IDE. אינו נטען בריצה — האובייקט עצמו מוזרק על-ידי ה-host. |
 
 ---

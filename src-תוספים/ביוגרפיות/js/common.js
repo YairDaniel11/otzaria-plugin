@@ -174,6 +174,41 @@ function openInOtzaria(src) {
   */
 }
 
+/* ===========================================================================
+ *  גלילה אופקית עם משטח מגע
+ *  בעמוד RTL כמו זה, ה-WebView של אוצריא מספק לעיתים deltaX בסימן הפוך,
+ *  והתוצאה היא גלילה לצד הנגדי לזה שאליו מזיזים את האצבעות. במקום להישען
+ *  על התנהגות ברירת המחדל, אנחנו מטפלים בגלילה האופקית בעצמנו: הגדלת
+ *  scrollLeft פירושה תמיד תזוזה ימינה פיזית — גם במיכל LTR (0..max) וגם
+ *  במיכל RTL (‎-max..0) — ולכן המיפוי הזה נכון בשתי התצוגות.
+ * ========================================================================= */
+function scrollableXAncestor(node) {
+  for (let el = node; el && el !== document.documentElement; el = el.parentElement) {
+    if (el.nodeType !== 1) continue;
+    if (el.scrollWidth - el.clientWidth <= 1) continue;
+    const overflowX = getComputedStyle(el).overflowX;
+    if (overflowX === 'auto' || overflowX === 'scroll') return el;
+  }
+  return null;
+}
+
+function installHorizontalScrollFix() {
+  window.addEventListener('wheel', ev => {
+    const dx = ev.deltaX || (ev.shiftKey ? ev.deltaY : 0);
+    if (!dx || ev.ctrlKey) return;
+    const el = scrollableXAncestor(ev.target);
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    /* במיכל RTL הטווח הוא ‎-max..0 ובמיכל LTR הוא 0..max.
+       בקצה — משאירים את האירוע לדפדפן כדי לא לחסום גלילה של ההורה. */
+    const rtl = getComputedStyle(el).direction === 'rtl';
+    const next = Math.max(rtl ? -max : 0, Math.min(rtl ? 0 : max, el.scrollLeft + dx));
+    if (next === el.scrollLeft) return;
+    el.scrollLeft = next;
+    ev.preventDefault();
+  }, { passive: false });
+}
+
 /* ----- טוסט ----- */
 let _toastT = null;
 function toast(msg) {

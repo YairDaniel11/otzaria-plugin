@@ -174,6 +174,8 @@ if (typeof window.Otzaria !== 'undefined' && window.Otzaria.on) {
 /* ===========================================================================
  *  ממשק המשתמש
  * ========================================================================= */
+installHorizontalScrollFix();
+
 const detail = document.getElementById('detail');
 const dcontent = document.getElementById('dcontent');
 const dnav = document.getElementById('dnav');
@@ -212,7 +214,7 @@ function enrichBlock(id) {
    ערכים שמזוהים בוודאות עם ערך אחר בבסיס הנתונים ניתנים ללחיצה (xref);
    האחרים מוצגים כטקסט בלבד. */
 function relationsBlock(id) {
-  const list = (window.BIO_RELATIONS || {})[id];
+  const list = relationsFor(id);
   if (!list || !list.length) return '';
   const items = list.map(r => {
     const nameHtml = (r.id != null)
@@ -1119,10 +1121,11 @@ async function detectInstalledFonts() {
     }
 
     // הקשרים שמוצגים בתרשים: הורה/ילד, רב/תלמיד ובני/בנות זוג.
-    const UP_LABELS = { 'רבו/מורו': 1, 'הורה': 1, 'אב קדמון': 1 };
+    const UP_LABELS = { 'רבו/מורו': 1, 'הורה': 1, 'אב קדמון': 1, [DERIVED_PARENT_LABEL]: 1 };
     const DOWN_LABELS = { 'תלמיד/ה': 1, 'בן/בת': 1, 'צאצא/ית': 1 };
     const SPOUSE_LABELS = { 'בן/בת זוג': 1 };
-    const FAMILY_LABELS = { 'הורה': 1, 'בן/בת': 1, 'אב קדמון': 1, 'צאצא/ית': 1 };
+    const FAMILY_LABELS = { 'הורה': 1, 'בן/בת': 1, 'אב קדמון': 1, 'צאצא/ית': 1, [DERIVED_PARENT_LABEL]: 1 };
+    const PARENT_LABELS = { 'הורה': 1, [DERIVED_PARENT_LABEL]: 1 };
     const TEACHING_LABELS = { 'רבו/מורו': 1, 'תלמיד/ה': 1 };
     const BRANCH_START_DEPTH = 2;
     const BRANCH_MAX_DEPTH = 7;
@@ -1219,10 +1222,10 @@ async function detectInstalledFonts() {
       for (let cursor = 0; cursor < generationQueue.length && cursor < BRANCH_MAX_NODES; cursor++) {
         const id = generationQueue[cursor];
         const rank = directGeneration.get(id);
-        for (const rel of (window.BIO_RELATIONS || {})[id] || []) {
+        for (const rel of relationsFor(id)) {
           if (rel.id == null || (!FAMILY_LABELS[rel.label] || rel.label === 'אב קדמון' || rel.label === 'צאצא/ית')) continue;
           if (directGeneration.has(rel.id)) continue;
-          directGeneration.set(rel.id, rank + (rel.label === 'הורה' ? -1 : 1));
+          directGeneration.set(rel.id, rank + (PARENT_LABELS[rel.label] ? -1 : 1));
           generationQueue.push(rel.id);
         }
       }
@@ -1236,7 +1239,7 @@ async function detectInstalledFonts() {
       for (let cursor = 0; cursor < nodes.length; cursor++) {
         const parent = nodes[cursor];
         if (parent.id == null) continue;
-        const rels = (window.BIO_RELATIONS || {})[parent.id] || [];
+        const rels = relationsFor(parent.id);
         if (parent.depth >= branchDepth) {
           hasFrontier = hasFrontier || rels.some(rel => !nodeByKey.has(rel.id != null ? 'id:' + rel.id : 'external:' + rel.name + '|' + rel.label));
           continue;
@@ -1380,7 +1383,7 @@ async function detectInstalledFonts() {
       relBack.disabled = hpos <= 0;
       shownPersonId = id;
 
-      const rels = (window.BIO_RELATIONS || {})[id] || [];
+      const rels = relationsFor(id);
       const up = rels.filter(r => UP_LABELS[r.label]);
       const down = rels.filter(r => DOWN_LABELS[r.label]);
       const spouses = rels.filter(r => SPOUSE_LABELS[r.label]);

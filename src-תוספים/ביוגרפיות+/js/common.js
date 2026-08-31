@@ -190,6 +190,81 @@ function splitName(n) {
   return m ? { name: m[1], count: m[2] } : { name: String(n), count: null };
 }
 
+/* ===========================================================================
+ *  שם האב מתוך השם עצמו
+ *  רוב השמות במאגר הם שמות פטרונימיים — "אבא בר איבו", "רבי אבא בריה דרב
+ *  ביבי", "רבי שמעון בן יוחאי". גם כשאין רשומת קשר מפורשת ב-BIO_RELATIONS,
+ *  שם האב כתוב בשם עצמו, ולכן אפשר להסיק אותו במקום להציג "לא ידועים במאגר".
+ * ========================================================================= */
+
+const DERIVED_PARENT_LABEL = 'הורה (לפי השם)';
+
+/* תארים שאפשר להתעלם מהם בתחילת השם. "רבה"/"רבא" אינם ברשימה — אלה שמות
+   פרטיים בפני עצמם ("רבה בר בר חנה"), והסרתם הייתה מוחקת את בעל הערך. */
+const NAME_TITLE_RE = /^(?:רבינו|רבנא|רבן|רבי|רב|מרי|מר|ר['׳]?)\s+/;
+
+/* מחברים פטרונימיים: "בר X" \ "בן X" \ "בריה דX" \ "ברבי X" */
+const PATRONYM_RE = /(?:^|\s)(?:בריה|ברי['׳])\s*ד|(?:^|\s)(?:בר|בן|ברבי)\s+/;
+
+/* מתארי קרבה שמצביעים על אדם אחר — "אבוה דפלוני" (אביו של), "אחוה דפלוני"
+   (אחיו של). כשאלה מופיעים לפני המחבר הפטרונימי, ה"בר" שאחריהם שייך לאותו
+   אדם אחר ולא לבעל הערך, ולכן אין להסיק ממנו כלום. */
+const OTHER_PERSON_RE = /(?:^|\s)(?:אבוה|אחוה|אחוי|חתניה|בריה\s*דבריה|חמוה|אמיה|דבי)\s*ד/;
+
+/* אינדקס שמות מנורמלים -> ערך, לזיהוי האב כערך קיים במאגר */
+let _nameIndex = null;
+function nameIndex() {
+  if (_nameIndex) return _nameIndex;
+  _nameIndex = new Map();
+  for (const entry of DATA) {
+    const key = normSearchText(splitName(entry.n).name);
+    if (key && !_nameIndex.has(key)) _nameIndex.set(key, entry);
+  }
+  return _nameIndex;
+}
+
+/* מחזיר את שם האב כפי שהוא כתוב בתוך השם, או null אם אי אפשר להסיק */
+function parentNameFromName(fullName) {
+  const name = splitName(fullName).name.replace(NAME_TITLE_RE, '').trim();
+  if (!name) return null;
+
+  const match = PATRONYM_RE.exec(name);
+  if (!match) return null;
+  /* שם שמתחיל במחבר עצמו ("בר קפרא", "בן עזאי") אינו פטרונימי */
+  if (match.index === 0) return null;
+
+  const other = OTHER_PERSON_RE.exec(name);
+  if (other && other.index < match.index) return null;
+
+  const father = name.slice(match.index + match[0].length).trim();
+  if (father.length < 2) return null;
+  /* "בר בריה דפלוני" — נכדו של; האב עצמו אינו נקוב בשם, ואין מה להציג */
+  if (/^(?:בריה|ברי['׳])\s*ד/.test(father)) return null;
+  return father;
+}
+
+/* קשר "הורה" שנגזר מהשם — עם id כשהאב קיים כערך במאגר, אחרת טקסט בלבד */
+function derivedParentRelation(entry) {
+  if (!entry) return null;
+  const father = parentNameFromName(entry.n);
+  if (!father) return null;
+  const match = nameIndex().get(normSearchText(father));
+  if (match && match.i === entry.i) return null;
+  return { name: match ? splitName(match.n).name : father, label: DERIVED_PARENT_LABEL, id: match ? match.i : null };
+}
+
+/* כל הקשרים של ערך: הרשומים ב-BIO_RELATIONS, ובנוסף האב שנגזר מהשם —
+   רק כשאין כבר הורה רשום ושהשם אינו מופיע ברשימה ממילא. */
+function relationsFor(id) {
+  const listed = (window.BIO_RELATIONS || {})[id] || [];
+  if (listed.some(r => r.label === 'הורה')) return listed;
+  const derived = derivedParentRelation(DATA_BY_ID.get(id));
+  if (!derived) return listed;
+  const already = listed.some(r =>
+    (derived.id != null && r.id === derived.id) || normSearchText(r.name) === normSearchText(derived.name));
+  return already ? listed : listed.concat([derived]);
+}
+
 /* ----- דירוג חיפוש: שם מדויק קודם, ואחריו התאמה קרובה בשם -----
    החיפוש סובלני לניקוד, גרשיים, אותיות סופיות ותארים (רב/רבי), אך אינו
    "מנחש" איות אחר. כך תוצאות רלוונטיות נשארות קרובות ככל האפשר למה שהוקלד. */
@@ -244,6 +319,41 @@ function openInOtzaria(src) {
      const { data } = await Otzaria.call('library.findBooks', { query: book.title, limit: 1 });
      if (data && data[0]) await Otzaria.call('reader.openBookAtRef', { bookId: data[0].bookId, ref: book.ref });
   */
+}
+
+/* ===========================================================================
+ *  גלילה אופקית עם משטח מגע
+ *  בעמוד RTL כמו זה, ה-WebView של אוצריא מספק לעיתים deltaX בסימן הפוך,
+ *  והתוצאה היא גלילה לצד הנגדי לזה שאליו מזיזים את האצבעות. במקום להישען
+ *  על התנהגות ברירת המחדל, אנחנו מטפלים בגלילה האופקית בעצמנו: הגדלת
+ *  scrollLeft פירושה תמיד תזוזה ימינה פיזית — גם במיכל LTR (0..max) וגם
+ *  במיכל RTL (‎-max..0) — ולכן המיפוי הזה נכון בשתי התצוגות.
+ * ========================================================================= */
+function scrollableXAncestor(node) {
+  for (let el = node; el && el !== document.documentElement; el = el.parentElement) {
+    if (el.nodeType !== 1) continue;
+    if (el.scrollWidth - el.clientWidth <= 1) continue;
+    const overflowX = getComputedStyle(el).overflowX;
+    if (overflowX === 'auto' || overflowX === 'scroll') return el;
+  }
+  return null;
+}
+
+function installHorizontalScrollFix() {
+  window.addEventListener('wheel', ev => {
+    const dx = ev.deltaX || (ev.shiftKey ? ev.deltaY : 0);
+    if (!dx || ev.ctrlKey) return;
+    const el = scrollableXAncestor(ev.target);
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    /* במיכל RTL הטווח הוא ‎-max..0 ובמיכל LTR הוא 0..max.
+       בקצה — משאירים את האירוע לדפדפן כדי לא לחסום גלילה של ההורה. */
+    const rtl = getComputedStyle(el).direction === 'rtl';
+    const next = Math.max(rtl ? -max : 0, Math.min(rtl ? 0 : max, el.scrollLeft + dx));
+    if (next === el.scrollLeft) return;
+    el.scrollLeft = next;
+    ev.preventDefault();
+  }, { passive: false });
 }
 
 /* ----- טוסט ----- */

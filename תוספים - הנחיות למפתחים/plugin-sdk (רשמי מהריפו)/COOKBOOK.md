@@ -8,6 +8,7 @@
 2. [אייקונים מאוצריא](#2-אייקונים-מאוצריא)
 3. [חלונית הגדרות בסגנון אוצריא](#3-חלונית-הגדרות-בסגנון-אוצריא)
 4. [סרגל כותרת התוסף (Top Bar)](#4-סרגל-כותרת-התוסף-top-bar)
+5. [הצגת מפרשים לפסוק הנוכחי](#5-הצגת-מפרשים-לפסוק-הנוכחי)
 
 ---
 
@@ -126,12 +127,11 @@ my-plugin/
 
 ## 2. אייקונים מאוצריא
 
-**חשוב להבין:** אין API שמחזיר לתוסף קובץ SVG של אייקון. אוצריא מציירת אייקוני
-[FluentUI System Icons](https://github.com/microsoft/fluentui-system-icons) **בצד שלה** בשני מקומות שהתוסף מצהיר עליהם. בתוך ה-WebView עצמו — האייקונים הם שלך (SVG inline).
+**חשוב להבין:** אין API שמחזיר לתוסף קובץ SVG של אייקון. אוצריא מציירת **בצד שלה** אייקונים משתי ספריות — [אוצריא](https://github.com/Otzaria/otzaria_icons) ו-[FluentUI System Icons](https://github.com/microsoft/fluentui-system-icons) — בכל מקום שהתוסף מצהיר עליו. בתוך ה-WebView עצמו — האייקונים הם שלך (SVG inline).
 
 ### מקום 1 — אייקון הטאב במסך "כלים"
 
-מוצהר ב-`manifest.json`. השם הוא שם FluentUI בגודל 24, המסתיים ב-`_24_regular` או `_24_filled`:
+מוצהר ב-`manifest.json`. שם מכל אחת משתי הספריות, בגודל 24, המסתיים ב-`_24_regular` או `_24_filled`:
 
 ```json
 "contributes": {
@@ -146,7 +146,7 @@ my-plugin/
 
 ### מקום 2 — אייקון בתפריט לחצן-ימין (מסכי טקסט)
 
-בעת רישום פריט לתפריט ההקשר, ניתן לציין `icon` (שם FluentUI 24, אופציונלי):
+בעת רישום פריט לתפריט ההקשר, ניתן לציין `icon` (שם אייקון 24, אופציונלי):
 
 ```javascript
 await Otzaria.call('reader.addContextMenuItem', {
@@ -156,7 +156,9 @@ await Otzaria.call('reader.addContextMenuItem', {
 });
 ```
 
-> **איך מוצאים שם אייקון?** גלוש ל-[מאגר FluentUI](https://github.com/microsoft/fluentui-system-icons), או חפש בקוד אוצריא `FluentIcons.xxx_24_regular`. שם שאינו קיים במפת האייקונים יוצג כפאזל ברירת מחדל (בטאב) או ללא אייקון (בתפריט) — לא תיזרק שגיאה.
+> **איך מוצאים שם אייקון?** ראה [ICONS.md](ICONS.md) — רשימת 135 אייקוני אוצריא, קישור לקטלוג פלואנט, וכלל ההכרעה בין שתי הספריות. שם שאינו קיים באף אחת מהן יוצג כפאזל ברירת מחדל (בטאב) או ללא אייקון (בתפריט) — לא תיזרק שגיאה.
+>
+> **שם שקיים בשתי הספריות** (למשל `book_24_regular`) נפתר לגרסת אוצריא. כדי לקבל דווקא את הצורה של פלואנט, כתוב `fluent:book_24_regular`.
 
 ### בתוך ה-WebView — SVG inline שעוקב אחרי ה-theme
 
@@ -562,6 +564,63 @@ body { overflow: hidden; }          /* הגלילה בתוכן, לא בעמוד 
 | כותרת | 16px, `w600`, `onSurface` | `AppTopBar.titleStyle` |
 | כותרת משנה / מחבר | 12px, `w400`, `onSurfaceVariant` | `AppTopBar.subtitleStyle` |
 | pill ניווט פעיל | `secondaryContainer` / `onSecondaryContainer` | סרגל הניווט הצדי |
+
+---
+
+## 5. הצגת מפרשים לפסוק הנוכחי
+
+שלוש קריאות: איפה המשתמש עומד → אילו קישורים יוצאים משם → מה כתוב בצד השני.
+
+**הרשאות:** `reader.open`, `library.links.read`, `library.content.read`.
+
+```javascript
+async function commentariesForCurrentLine() {
+  // 1. המיקום הנוכחי בקורא. currentIndex הוא מספר שורה 0-based.
+  const { data: loc } = await Otzaria.call('reader.getCurrentRef');
+  if (!loc || loc.currentBookId == null) return [];
+
+  // 2. הקישורים על השורה הזו. החלון מוגבל ל-200 שורות; כאן די בשורה אחת.
+  const { data: links } = await Otzaria.call('library.getLinks', {
+    bookId: loc.currentBookId,
+    startLine: loc.currentIndex,
+    endLine: loc.currentIndex,
+  });
+
+  const commentaries = links.links.filter((l) => l.isCommentary);
+  if (commentaries.length === 0) return [];
+
+  // 3. התוכן — עד 25 פריטים בקריאה. מעבירים את שדות היעד כמות שהם.
+  const batch = commentaries.slice(0, 25);
+  const { data: contents } = await Otzaria.call('library.getLinkContent', {
+    links: batch.map((l) => ({
+      targetTitle: l.targetTitle,
+      targetLine: l.targetLine,
+      targetLineEnd: l.targetLineEnd,
+      targetCategoryId: l.targetCategoryId,
+      targetIsUserBook: l.targetIsUserBook,
+    })),
+  });
+
+  // items חוזר באותו סדר של הקלט.
+  return batch.map((link, i) => ({
+    title: link.targetTitle,
+    ref: link.targetHeRef,
+    html: contents.items[i].content ?? null,
+  }));
+}
+```
+
+### המלכודים
+
+| מלכוד | מה קורה | הפתרון |
+|-------|---------|--------|
+| השוואת שם ספר מול ליטרל `'רש"י על בראשית'` | שמות הספרים במסד בגרשיים עבריים (`״` U+05F4) — ההשוואה נכשלת בשקט | להשתמש במחרוזת שהתקבלה מה-API, לא בליטרל שהוקלד |
+| בקשת חלון גדול "ליתר ביטחון" | מעל 200 שורות ב-`getLinks` מוחזר `error.invalid_params` (ב-`getRawLinks` — מעל 1000) | לבקש בדיוק את השורות שמוצגות |
+| קריאת `getLinks` לכל הספר כדי לדעת מי המפרשים | תשובה כבדה שנחתכת ב-2,000 רשומות | `library.getLinkTargetsSummary` — כל ספרי היעד בקריאה אחת |
+| ייצוא בכמויות דרך `getLinks` בחלונות של 200 שורות | עשרות קריאות RPC, והמרה חוזרת לפורמט הקובץ | `library.getRawLinks` — חלון של 1000 שורות, ישירות במפתחות של `links.json` |
+| שמירת פלט `getRawLinks` כגיבוי | הפלט כולל קישורים הפוכים (`SOURCE`) שאוצריא מייצרת; ייבוא חוזר משכפל את הספרייה בהיפוך | הפלט מיועד לקריאה בלבד, לא לייבוא חזרה |
+| שליחת יותר מ-25 פריטים ל-`getLinkContent` | `error.invalid_params` | לחלק לאצוות של 25 |
+| `targetCategoryId` שנשמט | ספר אישי ששמו זהה לרשמי עלול להחזיר את התוכן של הספר האחר | להעביר את כל שדות היעד מ-`getLinks` כמות שהם |
 
 ---
 
