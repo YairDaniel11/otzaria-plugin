@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<title>מפרש חכם — רקע</title>
+</head>
+<body>
+<script src="engine.js"></script>
+<script>
+'use strict';
+
+const scheduleCheck = scCreateScheduler();
+
+Otzaria.on('plugin.boot', function () {
+  Otzaria.on('reader.current_ref_changed', function (loc) {
+    scheduleCheck(loc);
+  });
+
+  // המשתמש כבר עשוי להיות בתוך ספר כשמופע הרקע קם.
+  scCall('reader.getCurrentRef').then(function (ref) {
+    if (ref && ref.currentBookId) scheduleCheck(ref);
+  });
+});
+</script>
+</body>
+</html>

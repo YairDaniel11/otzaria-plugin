@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "com.yairdaniel.smart-commentator",
+  "name": "מפרש חכם",
+  "version": "1.0.2",
+  "description": "פותח לבד מפרש שהסתרת (כמו ביאור הלכה) רק כשיש לו פירוש על הקטע הנוכחי, וסוגר אותו שוב כשעוברים הלאה.",
+  "author": "YairDaniel",
+  "stability": "beta",
+  "entrypoint": "index.html",
+  "minAppVersion": "0.9.97",
+  "sdkVersion": "1.x",
+  "category": "Utilities",
+  "permissions": [
+    "app.info.read",
+    "reader.open",
+    "library.links.read",
+    "library.content.read",
+    "plugin.storage.read",
+    "plugin.storage.write",
+    "ui.feedback",
+    "events.subscribe:theme.changed",
+    "events.subscribe:reader.current_ref_changed",
+    "app.startup_contributions",
+    "app.run_on_startup"
+  ],
+  "contributes": {
+    "toolTab": {
+      "title": "מפרש חכם",
+      "order": 400,
+      "defaultPinned": true,
+      "iconName": "book_open_large_lines_24_regular"
+    },
+    "background": {
+      "entrypoint": "background.html"
+    },
+    "startup": {
+      "activationEvents": ["reader.current_ref_changed"]
+    }
+  }
+}

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>מפרש חכם</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow-y: auto; overflow-x: hidden; }
+
+  :root {
+    --color-primary: #6750A4; --color-on-primary: #FFFFFF;
+    --color-secondary: #625B71; --color-on-secondary: #FFFFFF;
+    --color-surface: #FFFBFE; --color-on-surface: #1C1B1F;
+    --color-surface-container-highest: #E6E0E9;
+    --color-error: #B3261E; --color-on-error: #FFFFFF;
+    --color-outline: #79747E;
+    --color-primary-subtle: rgba(103,80,164,0.12);
+    --color-secondary-subtle: rgba(98,91,113,0.12);
+    --font-ui: 'Rubik', system-ui, sans-serif;
+    --font-size-base: 15px;
+    --line-height: 1.5;
+    --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-pill: 999px;
+  }
+
+  body {
+    font-family: var(--font-ui);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height);
+    background: var(--color-surface);
+    color: var(--color-on-surface);
+    direction: rtl;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .plugin-header {
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px 16px; flex: 0 0 auto;
+    border-bottom: 1px solid var(--color-outline);
+    background: var(--color-surface);
+  }
+  .plugin-header h1 { font-size: 1.15em; font-weight: 700; }
+
+  main { flex: 1 1 auto; overflow-y: auto; padding: 16px; max-width: 640px; width: 100%; margin: 0 auto; }
+
+  .card {
+    background: var(--color-surface-container-highest);
+    border: 1px solid var(--color-outline);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card h2 { font-size: 0.95em; font-weight: 700; color: var(--color-primary); margin-bottom: 10px; }
+  .card p { font-size: 0.85em; line-height: 1.6; margin-bottom: 8px; opacity: 0.9; }
+  .card p:last-child { margin-bottom: 0; }
+
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--color-outline);
+  }
+  .row:last-child { border-bottom: none; }
+  .row-label { font-size: 0.88em; }
+  .row-sub { font-size: 0.75em; opacity: 0.7; margin-top: 2px; }
+
+  .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex: 0 0 auto; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-track {
+    position: absolute; inset: 0; background: var(--color-outline); border-radius: var(--radius-pill);
+    cursor: pointer; transition: background 0.2s;
+  }
+  .switch-track::before {
+    content: ''; position: absolute; height: 18px; width: 18px; right: 3px; top: 3px;
+    background: var(--color-on-primary); border-radius: 50%; transition: transform 0.2s;
+  }
+  .switch input:checked + .switch-track { background: var(--color-primary); }
+  .switch input:checked + .switch-track::before { transform: translateX(-18px); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    background: transparent; color: var(--color-on-surface);
+    border: 1px solid var(--color-outline); border-radius: var(--radius-sm);
+    padding: 7px 14px; cursor: pointer; font-family: var(--font-ui); font-size: 0.82em;
+    white-space: nowrap; transition: background 0.15s, opacity 0.15s;
+  }
+  .btn:hover { background: var(--color-primary-subtle); }
+  .btn.filled { background: var(--color-primary); color: var(--color-on-primary); border-color: var(--color-primary); font-weight: 700; }
+  .btn.filled:hover { opacity: 0.88; }
+  .btn.danger { color: var(--color-error); border-color: var(--color-error); }
+  .btn.icon-only { padding: 6px 8px; }
+  .btn:disabled { opacity: 0.45; cursor: default; }
+
+  .input {
+    padding: 9px 12px; border: 1.5px solid var(--color-outline); border-radius: var(--radius-sm);
+    font-family: var(--font-ui); font-size: 0.88em; color: var(--color-on-surface);
+    background: var(--color-surface); direction: rtl; outline: none; flex: 1 1 auto; min-width: 0;
+    transition: border-color 0.15s;
+  }
+  .input:focus { border-color: var(--color-primary); }
+
+  .add-row { display: flex; gap: 8px; margin-bottom: 10px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--color-primary-subtle); color: var(--color-primary);
+    border-radius: var(--radius-pill); padding: 4px 6px 4px 12px; font-size: 0.8em; cursor: pointer;
+    border: 1px dashed var(--color-primary);
+  }
+  .chip:hover { background: var(--color-primary); color: var(--color-on-primary); }
+
+  .fragment-list { display: flex; flex-direction: column; gap: 8px; }
+  .fragment-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--color-surface); border: 1px solid var(--color-outline);
+    border-radius: var(--radius-md); padding: 8px 12px;
+  }
+  .fragment-text { font-size: 0.88em; font-weight: 600; }
+  .empty-hint { font-size: 0.82em; opacity: 0.65; padding: 6px 2px; }
+
+  .status-box {
+    font-size: 0.82em; border-radius: var(--radius-sm); padding: 10px 12px;
+    background: var(--color-secondary-subtle); margin-top: 10px; line-height: 1.6; display: none;
+  }
+  .status-box.show { display: block; }
+</style>
+</head>
+<body>
+
+<header class="plugin-header">
+  <h1>מפרש חכם</h1>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>מה זה עושה</h2>
+    <p>
+      אם נהגת להסתיר מפרש מסוים (למשל ביאור הלכה) כי הוא לא מופיע בכל סימן,
+      התוסף הזה יעשה את זה בשבילך אוטומטית: כשתגיע לקטע שבו יש לאותו מפרש
+      פירוש, הוא ייפתח לבד. כשתעבור הלאה לקטע שאין בו פירוש, הוא ייסגר שוב.
+    </p>
+    <p>
+      התוסף פועל ברקע בזמן הקריאה הרגילה במסך עיון — אין צורך לפתוח את
+      הלשונית הזו כל פעם, רק כדי להגדיר את רשימת המפרשים למטה.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>הפעלה</h2>
+    <div class="row">
+      <div>
+        <div class="row-label">הפעל מעקב אוטומטי</div>
+        <div class="row-sub">כיבוי עוצר את כל הפעולה האוטומטית</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="enabledToggle" />
+        <span class="switch-track"></span>
+      </label>
+    </div>
+    <div class="row">
+      <div>
+        <div class="row-label">הסתר שוב כשעוזבים את הקטע</div>
+        <div class="row-sub">אם כבוי — המפרש רק ייפתח לבד, ולא ייסגר לבד</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="autoHideToggle" />
+        <span class="switch-track"></span>
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>מפרשים מנוהלים</h2>
+    <p>
+      הוסף כאן חלק מזוהה משם המפרש כפי שהוא מופיע ברשימת המפרשים של הספר
+      (למשל "ביאור הלכה"). כל מפרש שמכיל את המילים האלה בשמו ינוהל אוטומטית.
+    </p>
+
+    <div class="chips" id="suggestChips"></div>
+
+    <div class="add-row">
+      <input type="text" class="input" id="fragmentInput" placeholder="לדוגמה: ביאור הלכה" />
+      <button class="btn filled" id="addFragmentBtn" type="button">הוספה</button>
+    </div>
+
+    <div class="fragment-list" id="fragmentList"></div>
+  </section>
+
+  <section class="card">
+    <h2>בדיקה ידנית</h2>
+    <p>אפשר לבדוק את המיקום הנוכחי בספר הפתוח, בלי לחכות למעבר לקטע אחר.</p>
+    <button class="btn" id="checkNowBtn" type="button">בדוק את המיקום הנוכחי</button>
+    <div class="status-box" id="statusBox"></div>
+  </section>
+
+</main>
+
+<script src="engine.js"></script>
+<script>
+'use strict';
+
+const $ = (id) => document.getElementById(id);
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s == null ? '' : s);
+  return d.innerHTML;
+}
+
+function hexToRgba(hex, alpha) {
+  if (!hex || typeof hex !== 'string') return 'transparent';
+  if (hex.startsWith('rgba') || hex.startsWith('rgb')) return hex;
+  let clean = hex;
+  if (clean.length === 9) clean = clean.slice(0, 7);
+  if (clean.length !== 7) return clean;
+  const r = parseInt(clean.slice(1, 3), 16);
+  const g = parseInt(clean.slice(3, 5), 16);
+  const b = parseInt(clean.slice(5, 7), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return clean;
+  return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+}
+
+function applyTheme(theme) {
+  if (!theme || !theme.colorScheme) return;
+  const cs = theme.colorScheme;
+  const r = document.documentElement;
+  r.style.setProperty('--color-primary', cs.primary);
+  r.style.setProperty('--color-on-primary', cs.onPrimary);
+  r.style.setProperty('--color-secondary', cs.secondary);
+  r.style.setProperty('--color-on-secondary', cs.onSecondary);
+  r.style.setProperty('--color-surface', cs.surface);
+  r.style.setProperty('--color-on-surface', cs.onSurface);
+  r.style.setProperty('--color-surface-container-highest', cs.surfaceContainerHighest);
+  r.style.setProperty('--color-error', cs.error);
+  r.style.setProperty('--color-on-error', cs.onError);
+  r.style.setProperty('--color-outline', cs.outline);
+  r.style.setProperty('--color-primary-subtle', hexToRgba(cs.primary, 0.12));
+  r.style.setProperty('--color-secondary-subtle', hexToRgba(cs.secondary, 0.12));
+  if (theme.typography) {
+    const t = theme.typography;
+    if (t.uiFontFamily) r.style.setProperty('--font-ui', "'" + t.uiFontFamily + "', system-ui, sans-serif");
+  }
+}
+
+async function toast(message, kind) {
+  const method = kind === 'error' ? 'ui.showError' : (kind === 'success' ? 'ui.showSuccess' : 'ui.showMessage');
+  await scCall(method, { message: message });
+}
+
+const SUGGESTIONS = ['ביאור הלכה', 'שער הציון', 'באר היטב'];
+
+let state = { fragments: [], enabled: true, autoHide: true };
+
+function renderSuggestChips() {
+  const box = $('suggestChips');
+  box.innerHTML = '';
+  SUGGESTIONS.filter((s) => state.fragments.indexOf(s) === -1).forEach((s) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    chip.textContent = '+ ' + s;
+    chip.title = 'הוספה מהירה';
+    chip.addEventListener('click', () => addFragment(s));
+    box.appendChild(chip);
+  });
+}
+
+function renderFragmentList() {
+  const box = $('fragmentList');
+  box.innerHTML = '';
+  if (state.fragments.length === 0) {
+    box.innerHTML = '<div class="empty-hint">עדיין לא נוסף אף מפרש. אפשר להשתמש באחת ההצעות למעלה, או להקליד שם.</div>';
+    return;
+  }
+  state.fragments.forEach((f) => {
+    const row = document.createElement('div');
+    row.className = 'fragment-item';
+    const text = document.createElement('span');
+    text.className = 'fragment-text';
+    text.textContent = f;
+    row.appendChild(text);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn danger icon-only';
+    del.textContent = 'הסרה';
+    del.addEventListener('click', () => removeFragment(f));
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+}
+
+async function persist() {
+  await Promise.all([
+    scCall('storage.set', { key: SC_FRAGMENTS_KEY, value: state.fragments }),
+    scCall('storage.set', { key: SC_ENABLED_KEY, value: state.enabled }),
+    scCall('storage.set', { key: SC_AUTOHIDE_KEY, value: state.autoHide })
+  ]);
+}
+
+function addFragment(value) {
+  const v = (value || '').trim();
+  if (!v) return;
+  if (state.fragments.indexOf(v) !== -1) { toast('המפרש כבר ברשימה', 'error'); return; }
+  state.fragments.push(v);
+  renderSuggestChips();
+  renderFragmentList();
+  persist();
+}
+
+function removeFragment(value) {
+  state.fragments = state.fragments.filter((f) => f !== value);
+  renderSuggestChips();
+  renderFragmentList();
+  persist();
+}
+
+function debugLines(debug) {
+  if (!debug) return '';
+  const rows = [];
+  if (debug.currentRef) rows.push('מיקום: ' + debug.currentRef);
+  if (debug.bookId) rows.push('ספר (bookId): ' + debug.bookId);
+  if (debug.index !== undefined && debug.index !== null) rows.push('מספר שורה (index): ' + debug.index);
+  if (debug.range) rows.push('טווח הסימן שנבדק: משורה ' + debug.range.start + ' עד שורה ' + debug.range.end);
+  if (debug.fragments) rows.push('מפרשים מוגדרים: ' + (debug.fragments.join(', ') || '(אין)'));
+  if (debug.available) rows.push('מפרשים זמינים בספר: ' + (debug.available.join(', ') || '(אין)'));
+  if (debug.active) rows.push('מפרשים פעילים כרגע: ' + (debug.active.join(', ') || '(אין)'));
+  if (debug.managedNames) rows.push('מפרשים מנוהלים שזוהו: ' + (debug.managedNames.join(', ') || '(אין)'));
+  if (debug.hereNames) rows.push('מפרשים עם תוכן בשורה הזו: ' + (debug.hereNames.join(', ') || '(אין)'));
+  return rows.map((r) => esc(r)).join('<br>');
+}
+
+function showStatus(result) {
+  const box = $('statusBox');
+  box.classList.add('show');
+  let summary;
+  if (!result) {
+    summary = 'לא ניתן היה לבדוק כרגע.';
+  } else if (result.skipped === 'no_location') {
+    summary = 'לא נמצא ספר פתוח במסך העיון.';
+  } else if (result.skipped === 'disabled') {
+    summary = 'המעקב האוטומטי כבוי.';
+  } else if (result.skipped === 'no_fragments') {
+    summary = 'עדיין לא הוגדרו מפרשים לניהול.';
+  } else if (result.skipped === 'no_reader_tab') {
+    summary = 'לא נמצאה לשונית קריאה פעילה (או שמדובר ב-PDF).';
+  } else if (result.skipped === 'no_managed_commentators') {
+    summary = 'לספר הפתוח אין אף אחד מהמפרשים המנוהלים.';
+  } else if (result.skipped === 'commentators_lookup_failed') {
+    summary = 'לא ניתן היה לבדוק את המפרשים של הקטע הנוכחי.';
+  } else if (result.skipped === 'nothing_to_change') {
+    summary = 'הכל כבר במצב הנכון בקטע הנוכחי.';
+  } else {
+    const parts = [];
+    if (result.added && result.added.length) parts.push('נפתחו: ' + result.added.join(', '));
+    if (result.removed && result.removed.length) parts.push('נסגרו: ' + result.removed.join(', '));
+    summary = parts.length ? parts.join(' | ') : 'בוצע עדכון.';
+  }
+  const debugHtml = debugLines(result && result.debug);
+  box.innerHTML = esc(summary) + (debugHtml ? '<hr style="margin:8px 0;border:none;border-top:1px solid var(--color-outline);opacity:0.5;">' + debugHtml : '');
+}
+
+async function checkNow() {
+  const ref = await scCall('reader.getCurrentRef');
+  if (!ref) { showStatus({ skipped: 'no_location' }); return; }
+  const result = await scCheckLocation(ref);
+  showStatus(result);
+}
+
+async function loadSettings() {
+  const saved = await scGetSettings();
+  state.fragments = saved.fragments;
+  state.enabled = saved.enabled;
+  state.autoHide = saved.autoHide;
+  $('enabledToggle').checked = state.enabled;
+  $('autoHideToggle').checked = state.autoHide;
+  renderSuggestChips();
+  renderFragmentList();
+}
+
+function bindEvents() {
+  $('enabledToggle').addEventListener('change', (e) => { state.enabled = e.target.checked; persist(); });
+  $('autoHideToggle').addEventListener('change', (e) => { state.autoHide = e.target.checked; persist(); });
+  $('addFragmentBtn').addEventListener('click', () => {
+    addFragment($('fragmentInput').value);
+    $('fragmentInput').value = '';
+    $('fragmentInput').focus();
+  });
+  $('fragmentInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') $('addFragmentBtn').click();
+  });
+  $('checkNowBtn').addEventListener('click', checkNow);
+}
+
+Otzaria.on('plugin.boot', async function (payload) {
+  applyTheme(payload && payload.theme);
+  bindEvents();
+  await loadSettings();
+});
+
+Otzaria.on('theme.changed', function (theme) {
+  applyTheme(theme);
+});
+</script>
+</body>
+</html>
