@@ -9,35 +9,40 @@
     <link rel="manifest" id="manifest-placeholder">
     <!-- Noto Rashi Hebrew Font -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Rashi+Hebrew:wght@400;700&display=swap" rel="stylesheet">
-    
+    <!-- Rubik: גופן הממשק הרשמי של אוצריא -->
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+
     <style>
+        /* עיצוב לפי DESIGN_GUIDE.md הרשמי של אוצריא (Material 3) */
         :root {
-            --bg-primary: #fbf9f5;
-            --bg-secondary: #f3efe6;
-            --bg-tertiary: #e7e0d3;
-            --accent-color: #8c2d19;
-            --accent-hover: #702313;
-            --active-glow: #d97736;
-            --text-dark: #2c2523;
-            --border-color: #d8cfc4;
-            --header-bg: #2a2220;
-            --tab-bg: #1a1514;
-            --header-text: #f5eedc;
+            --bg-primary: #FFFBFE;
+            --bg-secondary: #F3EDF7;
+            --bg-tertiary: #ECE6F0;
+            --accent-color: #6750A4;
+            --accent-hover: #4F378B;
+            --active-glow: #7D5260;
+            --text-dark: #1C1B1F;
+            --border-color: #CAC4D0;
+            --header-bg: #332941;
+            --tab-bg: #211a2b;
+            --header-text: #ECE6F0;
             --font-serif: 'Frank Ruhl Hofshi', 'Times New Roman', serif;
-            --font-sans: system-ui, -apple-system, sans-serif;
+            --font-sans: 'Rubik', system-ui, -apple-system, sans-serif;
             --line-height: 1.8;
         }
 
         [data-theme="dark"] {
-            --bg-primary: #1e1b18;
-            --bg-secondary: #282420;
-            --bg-tertiary: #332e29;
-            --accent-color: #d97736;
-            --active-glow: #f39c12;
-            --text-dark: #e8e2d9;
-            --border-color: #443e37;
-            --header-bg: #151311;
-            --tab-bg: #0a0807;
+            --bg-primary: #141218;
+            --bg-secondary: #211f26;
+            --bg-tertiary: #2B2930;
+            --accent-color: #D0BCFF;
+            --accent-hover: #E8DDFF;
+            --active-glow: #EFB8C8;
+            --text-dark: #E6E1E5;
+            --border-color: #49454F;
+            --header-bg: #0F0D13;
+            --tab-bg: #0A090C;
+            --header-text: #E6E1E5;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -188,7 +193,7 @@
         .index-item.expanded { white-space: normal; text-overflow: clip; background: var(--bg-primary); font-size: 12px; line-height: 1.4; border-right: 3px solid var(--accent-color); padding-right: 6px; }
 
         /* Panels Layout - הראשי תמיד ראשון/עליון/ימני */
-        .panels-wrapper { flex: 1; display: flex; gap: 6px; padding: 6px; overflow: auto; background: #e0d8c8; transition: all 0.3s; }
+        .panels-wrapper { flex: 1; display: flex; gap: 6px; padding: 6px; overflow: auto; background: #F3EDF7; transition: all 0.3s; }
         
         /* טורים: הראשי בצד ימין (ראשון מימין), הפירושים משמאלו */
         .panels-wrapper.layout-torim { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; }
@@ -533,7 +538,7 @@
             .panel-header {
                 background: transparent !important;
                 border: none !important;
-                border-bottom: 2px solid #8c2d19 !important;
+                border-bottom: 2px solid #6750A4 !important;
                 padding: 4px 0 !important;
                 margin-bottom: 10px !important;
                 display: flex !important;
@@ -547,7 +552,7 @@
                 font-size: 18px !important;
                 font-weight: bold !important;
                 font-family: var(--font-serif) !important;
-                color: #8c2d19 !important;
+                color: #6750A4 !important;
                 display: inline-block !important;
                 border: none !important;
             }
@@ -3622,8 +3627,8 @@
                 short_name: "עריכת חידושים",
                 start_url: window.location.href,
                 display: "standalone",
-                background_color: "#2a2220",
-                theme_color: "#8c2d19",
+                background_color: "#332941",
+                theme_color: "#6750A4",
                 icons: [{ src: "https://cdn-icons-png.flaticon.com/512/3389/3389022.png", sizes: "512x512", type: "image/png" }]
             };
             const stringManifest = JSON.stringify(manifest);
@@ -3705,18 +3710,18 @@
             const css = `
                 @page { size: A4; margin: 2cm 1.8cm; }
                 body { font-family: 'Frank Ruhl Hofshi', 'David', 'Times New Roman', serif; direction: rtl; color: #000; }
-                h1 { font-size: 20pt; text-align: center; color: #8c2d19; margin-bottom: 14pt; }
+                h1 { font-size: 20pt; text-align: center; color: #6750A4; margin-bottom: 14pt; }
                 .page { page-break-after: always; break-after: page; }
                 .page:last-child { page-break-after: auto; break-after: auto; }
                 .main-text { font-size: 15pt; line-height: 1.7; text-align: justify; margin-bottom: 10pt; }
-                .notes-zone { border-top: 1.5pt solid #8c2d19; padding-top: 6pt; ${columns ? 'column-count: 2; column-gap: 16pt;' : ''} }
+                .notes-zone { border-top: 1.5pt solid #6750A4; padding-top: 6pt; ${columns ? 'column-count: 2; column-gap: 16pt;' : ''} }
                 .notes-block { break-inside: avoid; margin-bottom: 8pt; }
-                .notes-block-title { font-size: 11.5pt; font-weight: bold; color: #8c2d19; margin-bottom: 3pt; }
+                .notes-block-title { font-size: 11.5pt; font-weight: bold; color: #6750A4; margin-bottom: 3pt; }
                 .note-line { font-size: 10.5pt; line-height: 1.45; margin-bottom: 3pt; text-align: justify; }
-                .note-num { font-weight: bold; color: #8c2d19; }
+                .note-num { font-weight: bold; color: #6750A4; }
                 .note-dh { font-weight: bold; }
-                .note-anchor sup { color: #8c2d19; font-weight: bold; font-size: 0.7em; }
-                .otz-quote { color: #8c2d19; font-weight: 600; }
+                .note-anchor sup { color: #6750A4; font-weight: bold; font-size: 0.7em; }
+                .otz-quote { color: #6750A4; font-weight: 600; }
                 a { color: #1565c0; }
             `;
 
@@ -3817,11 +3822,11 @@
                     <title>${book.title}</title>
                     <style>
                         body { font-family: 'Times New Roman', serif; direction: rtl; }
-                        h1 { color: #8c2d19; text-align: center; }
-                        h2 { color: #2c2523; border-bottom: 2px solid #8c2d19; }
+                        h1 { color: #6750A4; text-align: center; }
+                        h2 { color: #2c2523; border-bottom: 2px solid #6750A4; }
                         .main-text { font-size: 18pt; line-height: 1.8; margin-bottom: 30px; }
                         .commentary-section { margin-top: 20px; }
-                        .commentary-title { font-size: 14pt; font-weight: bold; color: #8c2d19; margin-top: 15px; }
+                        .commentary-title { font-size: 14pt; font-weight: bold; color: #6750A4; margin-top: 15px; }
                         .commentary-item { font-size: 12pt; margin-bottom: 8px; line-height: 1.5; }
                         .dh-title { font-weight: bold; }
                     </style>
