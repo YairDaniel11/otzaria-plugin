@@ -41,11 +41,19 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        /* עוגן קשיח לגובה/רוחב המסך כולו - התוכנה לעולם אינה גדלה מעבר לגודל
+           החלון הנראה, ואין צורך לגלול כדי לראות את גבולותיה */
+        html { height: 100%; overflow: hidden; }
         body { font-family: var(--font-serif); background: var(--bg-primary); color: var(--text-dark); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         /* Rashi Font Utility */
+        /* שרשרת גופנים ארוכה: אם חסימת רשת מונעת טעינת Noto Rashi Hebrew (למשל
+           בתוך ה-webview של אוצריא), עדיין יש סיכוי טוב שאחד מהגופנים המותקנים
+           מקומית במחשבים עם תוכנות תורניות (Nachlieli / Rashi / Guttman Rashi /
+           Miriam Mono CLM Rashi) קיים, במקום ליפול ישר לגופן הרגיל. */
         .rashi-font {
-            font-family: 'Noto Rashi Hebrew', 'Frank Ruhl Hofshi', serif !important;
+            font-family: 'Noto Rashi Hebrew', 'Nachlieli', 'Rashi', 'Guttman Rashi',
+                         'Miriam Mono CLM Rashi', 'Keter Aram Tzova', 'Frank Ruhl Hofshi', serif !important;
         }
 
         /* Caret Blinking & Focus Improvements */
@@ -87,29 +95,34 @@
             letter-spacing: 0.2px;
         }
 
+        /* כל שכבות ההדגשה (hover/רקע כהה יותר) ברצועות הכלים נגזרות מ---header-text
+           באמצעות color-mix, ולא מצבע קבוע: כשהרצועה בהירה (--header-text כהה)
+           השכבה יוצאת כהה, וכשהיא כהה (--header-text בהיר) השכבה יוצאת בהירה -
+           כך הניגודיות נשמרת נכונה בכל ערכת נושא, כולל זו של אוצריא. */
         .btn-toggle-main-ribbon {
-            background: rgba(255, 255, 255, 0.15); color: #fff; border: 1px solid var(--accent-color);
+            background: color-mix(in srgb, var(--header-text) 15%, transparent); color: var(--header-text); border: 1px solid var(--accent-color);
             border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: all 0.2s; margin-left: 6px; flex-shrink: 0;
         }
-        .btn-toggle-main-ribbon:hover { background: var(--accent-color); }
+        .btn-toggle-main-ribbon:hover { background: var(--accent-color); color: var(--bg-primary); }
 
         .btn-refresh-page {
-            background: rgba(255, 255, 255, 0.1); color: var(--header-text); border: 1px solid rgba(255,255,255,0.2);
+            background: color-mix(in srgb, var(--header-text) 10%, transparent); color: var(--header-text);
+            border: 1px solid color-mix(in srgb, var(--header-text) 20%, transparent);
             border-radius: 3px; cursor: pointer; font-size: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px;
             font-family: var(--font-sans); flex-shrink: 0;
         }
-        .btn-refresh-page:hover { background: rgba(255,255,255,0.2); }
+        .btn-refresh-page:hover { background: color-mix(in srgb, var(--header-text) 20%, transparent); }
 
         .tab-btn {
-            background: rgba(255, 255, 255, 0.1); color: #aaa; border: none;
+            background: color-mix(in srgb, var(--header-text) 10%, transparent); color: color-mix(in srgb, var(--header-text) 65%, transparent); border: none;
             padding: 6px 14px; border-radius: 6px 6px 0 0; cursor: pointer;
             font-size: 11px; font-family: var(--font-sans); display: flex; align-items: center; gap: 6px;
             white-space: nowrap;
         }
-        .tab-btn.active { background: var(--header-bg); color: #fff; font-weight: bold; border-top: 2px solid var(--accent-color); }
+        .tab-btn.active { background: var(--header-bg); color: var(--header-text); font-weight: bold; border-top: 2px solid var(--accent-color); }
         .tab-close { color: #ff8a80; margin-right: 4px; cursor: pointer; font-weight: bold; border-radius: 50%; padding: 0 4px; }
-        .tab-close:hover { background: rgba(255,255,255,0.2); }
+        .tab-close:hover { background: color-mix(in srgb, var(--header-text) 20%, transparent); }
 
         /* Main Header Ribbon */
         header.app-header {
@@ -123,7 +136,7 @@
         /* כל האייקונים שמתחת לקו האדום נשארים תמיד בשורה אחת - אין גלישה לשורה שנייה,
            ובמקרה הצורך יש גלילה אופקית במקום גלישה */
         .ribbon-content { display: flex; flex-wrap: nowrap; gap: 6px; padding-top: 2px; align-items: center; justify-content: space-between; width: 100%; overflow-x: auto; overflow-y: hidden; }
-        .ribbon-group { display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.25); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); flex: 0 0 auto; white-space: nowrap; }
+        .ribbon-group { display: flex; align-items: center; gap: 4px; background: color-mix(in srgb, var(--header-text) 8%, transparent); padding: 3px 6px; border-radius: 4px; border: 1px solid color-mix(in srgb, var(--header-text) 12%, transparent); flex: 0 0 auto; white-space: nowrap; }
 
         /* שלושה אזורים ברצועת הכלים הראשית: ימין / מרכז / שמאל */
         .ribbon-section { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex: 0 0 auto; }
@@ -133,10 +146,10 @@
 
         /* Buttons & Controls */
         .btn-uniform {
-            background: transparent; color: var(--header-text); border: 1px solid rgba(255,255,255,0.2);
+            background: transparent; color: var(--header-text); border: 1px solid color-mix(in srgb, var(--header-text) 20%, transparent);
             border-radius: 3px; cursor: pointer; font-size: 10px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px;
         }
-        .btn-uniform:hover { background: rgba(255,255,255,0.15); }
+        .btn-uniform:hover { background: color-mix(in srgb, var(--header-text) 15%, transparent); }
         .btn-uniform.active { background: var(--accent-color); border-color: var(--accent-hover); }
         select.select-uniform { height: 22px; background: var(--bg-secondary); color: var(--text-dark); border: 1px solid var(--border-color); border-radius: 3px; font-size: 10px; padding: 0 4px; }
 
@@ -211,7 +224,15 @@
         .panels-wrapper.layout-shura-v-torim #commentariesWrapper { grid-column: 1; grid-row: 2; display: flex; flex-direction: row; gap: 6px; overflow-x: auto; }
 
         /* צורת הדף: הראשי במרכז. פירוש 1 מימין, פירוש 2 משמאל, פירוש 3+ למטה */
-        .panels-wrapper.layout-daf { display: grid; grid-template-columns: 1fr 2fr 1fr; grid-template-rows: auto auto; gap: 6px; overflow-y: auto; }
+        /* grid-template-rows בשברי fr (לא auto): כך שתי השורות תמיד מתחלקות בגובה
+           הזמין הקיים בפועל ולעולם אינן גדלות מעבר לו לפי תוכן ההערות - זו הייתה
+           הסיבה לכך שהתוכנה כולה הייתה יכולה לגלוש מעבר לגובה המסך בפריסת "צורת הדף" */
+        /* שורה שנייה (לפירוש שלישי ומעלה) קיימת רק כשבאמת יש חלון כזה גלוי -
+           אחרת נשאר שטח ריק גדול למטה עבור שורה שאף פאנל לא יושב בה. */
+        .panels-wrapper.layout-daf { display: grid; grid-template-columns: 1fr 2fr 1fr; grid-template-rows: 1fr; gap: 6px; }
+        .panels-wrapper.layout-daf:has(.commentary-panel:nth-of-type(n+3):not(.hidden-panel)) {
+            grid-template-rows: minmax(0, 1.8fr) minmax(0, 1fr);
+        }
         .panels-wrapper.layout-daf #mainPanel { grid-column: 2; grid-row: 1; }
         .panels-wrapper.layout-daf #commentariesWrapper { display: contents; }
         .panels-wrapper.layout-daf .commentary-panel:nth-of-type(1) { grid-column: 1; grid-row: 1; }
@@ -237,15 +258,32 @@
             box-shadow: 0 0 8px rgba(217, 119, 54, 0.4);
         }
 
-        /* כשהחלון צר מדי, רצועת הכלים של הכותרת יורדת לשתי שורות במקום להסתיר אייקונים
-           (למשל בתוך תפריט "עוד") - כל האייקונים נשארים גלויים תמיד, רק פרושים על פני
-           שתי שורות. הגובה בפועל מחושב ב-JS (observePanelHeaderHeight) כדי לעדכן את
-           מיקום סרגל העריכה שמתחתיה (--ph-h). */
+        /* כשהחלון צר מדי, סדר התגובה של רצועת הכותרת הוא הדרגתי - נשלט ב-JS
+           (updatePanelHeaderSqueeze, לפי מדידת רוחב אמיתי מ-ResizeObserver),
+           לא בשאילתת מיכל CSS: container-type גורר containment שמתנגש עם
+           ה-position:sticky של הכותרת וגורם לאייקונים "לברוח" מהחלון כשהוא מצטמצם.
+           1) קודם מצטמצמים הרווחים (מחלקה tight-gaps).
+           2) אם עדיין אין מספיק מקום - מוסתרות התוויות הטקסטואליות שליד האייקונים
+              (מחלקה hide-labels), והאייקון לבדו נשאר (עם title כתחליף).
+           3) רק כמוצא אחרון, כשגם זה לא מספיק, רצועת הכותרת גולשת לשורה שנייה
+              (flex-wrap: wrap) - כל האייקונים נשארים גלויים, רק פרושים על פני
+              שתי שורות. הגובה בפועל מחושב ב-JS (observePanelHeaderHeight) כדי
+              לעדכן את מיקום סרגל העריכה שמתחתיה (--ph-h). */
         .panel-header {
             background: var(--bg-secondary); padding: 1px 6px; display: flex; align-items: center; justify-content: space-between;
             border-bottom: 1px solid var(--border-color); font-family: var(--font-sans); position: sticky; top: 0; z-index: 10;
-            min-height: 24px; flex-wrap: wrap; row-gap: 2px;
+            min-height: 24px; flex-wrap: wrap; row-gap: 2px; gap: 6px;
         }
+        .panel-header-side { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+
+        /* שלב 1: צמצום רווחים */
+        .panel-header.tight-gaps { gap: 3px; padding: 1px 3px; }
+        .panel-header.tight-gaps .panel-header-side { gap: 1px; }
+        .panel-header.tight-gaps .header-title-wrapper { gap: 1px; }
+
+        /* שלב 2: הסתרת תוויות טקסט ליד אייקונים - נשאר רק האייקון (title מסביר) */
+        .panel-header.hide-labels .btn-label { display: none; }
+        .panel-header.hide-labels .btn-uniform, .panel-header.hide-labels .fmt-btn { padding-left: 3px; padding-right: 3px; }
 
         /* כותרת מוגדלת וממורכזת בתוך הסרגל */
         .header-title-wrapper {
@@ -300,7 +338,7 @@
         .fmt-divider { width: 1px; height: 12px; background: var(--border-color); margin: 0 1px; }
         .fmt-color { width: 20px; height: 20px; padding: 0; border: 1px solid var(--border-color); cursor: pointer; background: transparent; border-radius: 3px; }
 
-        .content-area { flex: 1; padding: 12px; overflow-y: auto; outline: none; font-size: 18px; line-height: var(--line-height); }
+        .content-area { flex: 1; padding: 12px; overflow-y: auto; outline: none; font-size: var(--content-font-size, 18px); line-height: var(--line-height); }
         
         /* Main Text Anchors - מספורים צמודים וקרובים בסוף המילה */
         .note-anchor { 
@@ -405,18 +443,28 @@
         /* סמן שורה חדשה לפי חלוקה מובנית בחלון הראשי */
         .struct-line-break { display: block; height: 0; }
 
-        /* פיצול חלון הערות יחיד לשני טורים המשכיים (ימין ואז שמאל) - אוטומטי,
-           בפריסות "שורה וטורים" ו"צורת הדף", כשיש חלון הערות יחיד בלבד.
-           display:block! נדרש כדי לגבור על display:flex של boxed-view/continuous-view/lines-view,
-           אחרת column-count מתעלם ממנו לגמרי (זה היה הבאג שגרם לפיצול לא לעבוד בפועל). */
-        .commentary-container.split-columns {
-            display: block !important;
-            column-count: 2;
-            column-gap: 18px;
-            column-rule: 1px solid var(--border-color);
+        /* פיצול חלון הערות יחיד לשני חלונות נפרדים לגמרי (ימין וממשיכו משמאל) -
+           אוטומטי, בפריסות "שורה וטורים" ו"צורת הדף", כשיש חלון הערות יחיד בלבד.
+           בניגוד לגרסה הקודמת (column-count בתוך מסגרת אחת), כאן כל חלק הוא
+           קופסה עצמאית לגמרי עם מסגרת/צל משלה - נראה ומתנהג כמו שני חלונות שונים,
+           כאשר החלק השני הוא ההמשך הישיר של הראשון (לא עותק, אלא אותם פריטים
+           ממש שעברו לקופסה השנייה). display:flex! גובר על boxed/continuous/lines-view. */
+        .commentary-container.split-active {
+            display: flex !important;
+            flex-direction: row;
+            gap: 12px;
+            align-items: stretch;
+            overflow: visible;
         }
-        .commentary-container.split-columns .commentary-item {
-            break-inside: avoid;
+        .commentary-container.split-active .split-box {
+            flex: 1 1 0;
+            min-width: 0;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--bg-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            padding: 8px;
         }
 
         .dh-num { font-weight: bold; color: var(--accent-color); font-size: 0.85em; cursor: pointer; padding-left: 2px; background: rgba(0,0,0,0.05); border-radius: 2px; display:inline-block; }
@@ -584,7 +632,7 @@
             <button class="btn-refresh-page" onclick="refreshPage()" title="ריענון הדף">
                 <i data-lucide="rotate-ccw" style="width:12px;"></i> ריענון
             </button>
-            <button class="btn-uniform" id="btnPathLink" style="background: rgba(255,255,255,0.1);" onclick="handlePathLinkClick(event)" title="העתק נתיב פתיחת התוכנה כחלון עצמאי ללא שורת כתובת">
+            <button class="btn-uniform" id="btnPathLink" onclick="handlePathLinkClick(event)" title="העתק נתיב פתיחת התוכנה כחלון עצמאי ללא שורת כתובת">
                 <i data-lucide="link" style="width:12px;"></i> נתיב
             </button>
 
@@ -630,7 +678,7 @@
                 <div class="ribbon-group">
                     <button class="btn-uniform" onclick="toggleIndex()"><i data-lucide="list" style="width:12px;"></i> אינדקס</button>
                 </div>
-                <div class="ribbon-group" id="hiddenPanelsGroup" style="display:none; background: rgba(0,0,0,0.1); border-color: rgba(255,255,255,0.1);">
+                <div class="ribbon-group" id="hiddenPanelsGroup" style="display:none;">
                     <div id="hiddenPanelsContainer" style="display:flex; gap:4px;"></div>
                 </div>
             </div>
@@ -638,7 +686,7 @@
             <!-- מרכז: יחס, פריסה, אפס, תצוגה -->
             <div class="ribbon-section ribbon-center">
                 <div class="ribbon-group">
-                    <span style="font-size:10px; color:#aaa;">יחס:</span>
+                    <span style="font-size:10px; color:color-mix(in srgb, var(--header-text) 65%, transparent);">יחס:</span>
                     <select class="select-uniform" id="ratioSelect" onchange="setRatio(this.value)">
                         <option value="">ללא יחס</option>
                         <option value="ratio-stable">יחס מסונכרן</option>
@@ -647,8 +695,7 @@
                 </div>
 
                 <div class="ribbon-group">
-                    <span style="font-size:10px; color:#aaa;">פריסה:</span>
-                    <i id="layoutIcon" data-lucide="rows-3" style="width:13px; color:var(--active-glow);"></i>
+                    <span style="font-size:10px; color:color-mix(in srgb, var(--header-text) 65%, transparent);">פריסה:</span>
                     <select class="select-uniform" id="layoutSelect" onchange="setLayout(this.value)">
                         <option value="layout-shurot" selected>שורות</option>
                         <option value="layout-torim">טורים</option>
@@ -664,7 +711,7 @@
                     </button>
                 </div>
 
-                <div class="ribbon-group">
+                <div class="ribbon-group" id="btnManualTheme">
                     <button class="btn-uniform" onclick="toggleTheme()"><i data-lucide="moon" style="width:12px;"></i> תצוגה</button>
                 </div>
             </div>
@@ -704,7 +751,7 @@
             <!-- Main Text Panel -->
             <div class="editor-panel" id="mainPanel">
                 <div class="panel-header">
-                    <div style="display:flex; gap:3px; align-items:center;">
+                    <div class="panel-header-side">
                         <i data-lucide="file-text" style="width:12px; color:var(--accent-color);"></i>
                         <button class="btn-toggle-toolbar" id="btnToggleToolbar_mainToolbar" onclick="toggleMainToolbar(this)" title="פתוח/סגור סרגל עריכה">
                             <i data-lucide="pen-tool" style="width:11px;"></i>
@@ -713,12 +760,12 @@
                     <div class="header-title-wrapper">
                         <button class="btn-uniform" id="btnToggleNav" onclick="toggleNavigation()" title="חלונית ניווט בספר" style="padding:1px 4px; font-size:9px;"><i data-lucide="list" style="width:10px;"></i></button>
                         <button class="fmt-btn" id="mainDisplayModeBtn" style="height:18px; padding:1px 3px; font-size:9px;" onclick="toggleMainLineMode(this)" title="הצגת הטקסט הראשי: ברצף הרגיל, או בשורות לפי חלוקה מובנית (פסוק / אות / סעיף / מזהה שזוהה)">
-                            <i data-lucide="align-justify" style="width:10px;"></i> <span>הצגה ברצף</span>
+                            <i data-lucide="align-justify" style="width:10px;"></i> <span class="btn-label">הצגה ברצף</span>
                         </button>
                         <span class="editable-title" id="mainTextTitle" contenteditable="true" onblur="saveCurrentState()">טקסט ראשי</span>
                     </div>
-                    <div style="display:flex; gap:3px; align-items:center;">
-                        <button class="btn-uniform" onclick="resetPanelSize('mainPanel')" title="אפס גודל חלון"><i data-lucide="rotate-ccw" style="width:10px;"></i> אפס גודל</button>
+                    <div class="panel-header-side">
+                        <button class="btn-uniform" onclick="resetPanelSize('mainPanel')" title="אפס גודל חלון"><i data-lucide="rotate-ccw" style="width:10px;"></i> <span class="btn-label">אפס גודל</span></button>
                         <button class="btn-uniform" style="color:#ff8a80;" onclick="confirmDeletePanel('mainPanel')" title="מחק חלון"><i data-lucide="trash-2" style="width:10px;"></i></button>
                         <button class="btn-uniform" style="color:#ffb74d;" onclick="hidePanel('mainPanel')" title="הסתר חלון זה"><i data-lucide="eye-off" style="width:10px;"></i></button>
                     </div>
@@ -930,7 +977,9 @@
         /* ================= שכבת התאמה: דפדפן עצמאי או תוסף אוצריא =================
            הקובץ הזה משמש בשתי הסביבות. בתוך אוצריא השמירה נעשית דרך ה-SDK,
            ומחוצה לה דרך localStorage. שאר הקוד אינו צריך לדעת באיזו סביבה הוא רץ. */
-        const IN_OTZARIA = typeof window !== 'undefined' && !!window.Otzaria;
+        /* בדיקה חיה בכל קריאה, לא ערך קבוע שנקבע פעם אחת בטעינת הסקריפט -
+           כדי שלא להינעל על false אם משהו מעכב את הזרקת window.Otzaria */
+        function inOtzaria() { return typeof window !== 'undefined' && !!window.Otzaria; }
 
         const AppStore = (() => {
             const cache = {};
@@ -947,7 +996,7 @@
             return {
                 /* טעינה מוקדמת של המפתחות אל הזיכרון, כדי שהשאר יעבוד סינכרונית */
                 async preload(keys) {
-                    if (!IN_OTZARIA) return;
+                    if (!inOtzaria()) return;
                     for (const key of keys) {
                         const val = await sdkCall('storage.get', { key });
                         if (val !== null && val !== undefined) {
@@ -956,11 +1005,11 @@
                     }
                 },
                 getItem(key) {
-                    if (IN_OTZARIA) return (key in cache) ? cache[key] : null;
+                    if (inOtzaria()) return (key in cache) ? cache[key] : null;
                     try { return localStorage.getItem(key); } catch (e) { return null; }
                 },
                 setItem(key, value) {
-                    if (IN_OTZARIA) {
+                    if (inOtzaria()) {
                         cache[key] = value;
                         clearTimeout(pending);
                         pending = setTimeout(() => {
@@ -1091,7 +1140,7 @@
             applySpellcheck();
             document.querySelectorAll('[data-role="spellcheck"]').forEach(b => b.classList.toggle('active', !spellcheckEnabled));
             loadBackupPrefs();
-            if (!IN_OTZARIA) initAppManifest();
+            if (!inOtzaria()) initAppManifest();
             applyOtzariaEnvironment();
 
             /* שמירת מיקום הגלילה ביציאה, לפתיחה מחדש באותו מקום */
@@ -1108,29 +1157,60 @@
             document.addEventListener('click', closeContextMenu);
         }
 
-        /* התאמות לסביבת אוצריא: אין שורת כתובת ואין צורך בריענון או בנתיב */
+        /* התאמות לסביבת אוצריא: אין שורת כתובת ואין צורך בריענון או בנתיב, ואין
+           להציג כפתור החלפת ערכת נושא ידני - הצבע חייב לבוא אך ורק מהאזנה
+           לערכת הנושא הפעילה של אוצריא, לא מבחירה עצמאית של התוסף. */
         function applyOtzariaEnvironment() {
-            if (!IN_OTZARIA) return;
+            if (!inOtzaria()) return;
             document.querySelectorAll('.btn-refresh-page').forEach(b => b.style.display = 'none');
             const pathBtn = document.getElementById('btnPathLink');
             if (pathBtn) pathBtn.style.display = 'none';
-            const indicator = document.getElementById('saveIndicator');
-            if (indicator) indicator.innerHTML = `<i data-lucide="check-circle" style="width:12px;"></i> נשמר באוצריא`;
+            const themeBtn = document.getElementById('btnManualTheme');
+            if (themeBtn) themeBtn.style.display = 'none';
+            setSavedIndicatorText();
         }
 
-        /* התאמת מצב כהה/בהיר לפי ערכת הנושא של אוצריא */
+        /* ---------- עיצוב לפי ערכת הנושא הפעילה של אוצריא (ללא צבע קבוע) ----------
+           התוסף אינו מגדיר פלטת צבעים משלו: כל צבעי הממשק (--bg-*, --accent-*,
+           --text-dark, --border-color, --header-*) נגזרים ישירות מ-theme.colorScheme
+           שאוצריא שולחת, ומתעדכנים בכל אירוע theme.changed. אין כאן ברירת מחדל
+           קבועה לתוסף - ה-:root שבקובץ משמש רק כשהתוכנה רצה כעצמאית בדפדפן,
+           ומוחלף מיד בתוך אוצריא. */
         function applyOtzariaTheme(theme) {
-            if (!theme) return;
-            if (theme.mode === 'dark') document.body.setAttribute('data-theme', 'dark');
-            else document.body.removeAttribute('data-theme');
+            if (!theme || !theme.colorScheme) return;
+            const cs = theme.colorScheme;
+            const r = document.documentElement.style;
 
-            if (theme.typography && theme.typography.fontSize) {
-                const mainText = document.getElementById('mainText');
-                if (mainText && !mainText.style.fontSize) mainText.style.fontSize = theme.typography.fontSize + 'px';
+            r.setProperty('--bg-primary', cs.surface);
+            r.setProperty('--bg-secondary', cs.surfaceContainerHighest);
+            r.setProperty('--bg-tertiary', `color-mix(in srgb, ${cs.surfaceContainerHighest} 82%, ${cs.onSurface} 18%)`);
+            r.setProperty('--text-dark', cs.onSurface);
+            r.setProperty('--border-color', cs.outline);
+
+            r.setProperty('--accent-color', cs.primary);
+            r.setProperty('--accent-hover', `color-mix(in srgb, ${cs.primary} 82%, black 18%)`);
+            r.setProperty('--active-glow', `color-mix(in srgb, ${cs.primary} 70%, white 30%)`);
+
+            /* רצועות הכלים העליונות - משטח מוגבה, בהיר או כהה בהתאם למצב הנוכחי */
+            r.setProperty('--header-bg', cs.surfaceContainerHighest);
+            r.setProperty('--tab-bg', cs.surface);
+            r.setProperty('--header-text', cs.onSurface);
+
+            if (theme.typography) {
+                const t = theme.typography;
+                if (t.fontFamily) r.setProperty('--font-serif', `'${t.fontFamily}', 'David', serif`);
+                if (t.lineHeight) r.setProperty('--line-height', String(t.lineHeight));
+                if (t.fontSize) r.setProperty('--content-font-size', t.fontSize + 'px');
             }
+
+            /* data-theme משמש רק לשני מדגישים קוסמטיים שאינם מבוססי-משתנה (ראה CSS) */
+            document.body.setAttribute('data-theme', theme.mode === 'dark' ? 'dark' : 'light');
         }
 
-        if (IN_OTZARIA) {
+        /* לפי ה-SDK הרשמי, window.Otzaria מוזרק ע"י המארח לפני שהסקריפט של התוסף
+           רץ בכלל - אין כאן מרוץ תזמון. בכל זאת, הבדיקה נעשית כאן ולא נשמרת
+           כדגל קבוע מראש (ר' inOtzaria למעלה), כדי לא להינעל על false בטעות. */
+        if (inOtzaria()) {
             /* בתוך אוצריא: טוענים קודם את הנתונים מה-SDK ואז מאתחלים */
             window.Otzaria.on('plugin.boot', async (payload) => {
                 if (payload && payload.app && payload.app.runMode === 'background') return;
@@ -1181,33 +1261,17 @@
             return !!el && getComputedStyle(el).display !== 'none' && !el.classList.contains('hidden-panel');
         }
 
-        /* פריסת flex (שורות/טורים, וכן כל אזור עם כמה חלונות הערות זה לצד זה) */
-        function adjustFlexNeighbor(panel, parent, deltaW, deltaH) {
-            const dir = getComputedStyle(parent).flexDirection || 'row';
-            const isRow = dir.indexOf('row') === 0;
-            const delta = isRow ? deltaW : deltaH;
-            if (!delta) return;
+        /* הערה: בפריסות flex (שורות/טורים) אין יותר צורך בקוד שמתרגם גרירה -
+           equalizePanels קובע לכל חלון flex-basis:auto יחד עם height/width מפורש,
+           ולכן שינוי הגודל הטבעי של הדפדפן (resize:both) כבר משפיע ישירות על
+           ה-flex-basis בפועל, וה-flex-grow/shrink הרגילים דואגים לשכן באופן
+           תקני, בלי JS. זה גם מה שתיקן את הבאג שבו רק הרוחב (הציר הצולב, שלא
+           כפוף ל-flex-basis כלל) הגיב לגרירה - הציר הראשי (בעל flex-basis קבוע
+           לא-auto) התעלם מכל resize, לא משנה מה עשה כאן ה-JS.
 
-            const kids = Array.from(parent.children).filter(isPanelVisible);
-            const idx = kids.indexOf(panel);
-            if (idx === -1) return;
-            const neighbor = kids[idx + 1] || kids[idx - 1];
-            if (!neighbor || neighbor === panel) return;
-
-            const panelRect = panel.getBoundingClientRect();
-            const neighborRect = neighbor.getBoundingClientRect();
-            const panelSize = isRow ? panelRect.width : panelRect.height;
-            const neighborSize = isRow ? neighborRect.width : neighborRect.height;
-            const MIN = 60;
-            const newNeighborSize = Math.max(MIN, neighborSize - delta);
-
-            syntheticResizeSkip.add(neighbor);
-            syntheticResizeSkip.add(panel);
-            neighbor.style.flex = `0 0 ${newNeighborSize}px`;
-            panel.style.flex = `0 0 ${panelSize}px`;
-            if (isRow) { neighbor.style.width = ''; panel.style.width = ''; }
-            else { neighbor.style.height = ''; panel.style.height = ''; }
-        }
+           בפריסות grid (טור ושורות / שורה וטורים / צורת הדף) עדיין נחוץ קוד -
+           שם גודל הטרק (העמודה/השורה) נקבע ב-parent, ושינוי גודל של item בודד
+           אינו משפיע על הטרקים כלל, ולכן שכן לא "מרגיש" גרירה טבעית בלי עזרה. */
 
         /* פריסת grid (טור ושורות / שורה וטורים / צורת הדף) - משנה את היחס בין שני
            הטרקים (עמודות או שורות) הסמוכים לחלון שגודלו שונה, כך שהשכן "מרגיש" את השינוי. */
@@ -1264,6 +1328,7 @@
 
                 const rect = panel.getBoundingClientRect();
                 const newSize = { w: rect.width, h: rect.height };
+                updatePanelHeaderSqueeze(panel, newSize.w);
 
                 if (syntheticResizeSkip.has(panel)) {
                     syntheticResizeSkip.delete(panel);
@@ -1282,11 +1347,28 @@
                 const parent = getRenderParent(panel);
                 if (!parent) return;
                 const parentDisplay = getComputedStyle(parent).display;
+                if (parentDisplay !== 'grid') return; /* פריסות flex - הדפדפן כבר מטפל בזה לבד */
 
-                if (parentDisplay === 'flex') adjustFlexNeighbor(panel, parent, deltaW, deltaH);
-                else if (parentDisplay === 'grid') adjustGridNeighbor(panel, parent, deltaW, deltaH);
+                /* אם החלל הכולל (panelsWrapper) עצמו שינה גודל באותו רגע - זה שינוי
+                   כללי (חלון/דפדפן, החלפת פריסה, הסתרת פאנל) ולא גרירה ידנית של
+                   הפאנל הזה בלבד. במקרה כזה אין להתערב - זו הייתה הסיבה ל"קפיצות"
+                   שהתרחשו בכל שינוי גודל, לא רק בגרירה בפועל. */
+                if (isGlobalReflow()) return;
+
+                adjustGridNeighbor(panel, parent, deltaW, deltaH);
             });
         }) : null;
+
+        let lastWrapperSize = null;
+        function isGlobalReflow() {
+            const wrapper = document.getElementById('panelsWrapper');
+            if (!wrapper) return false;
+            const rect = wrapper.getBoundingClientRect();
+            const size = { w: rect.width, h: rect.height };
+            const changed = !lastWrapperSize || lastWrapperSize.w !== size.w || lastWrapperSize.h !== size.h;
+            lastWrapperSize = size;
+            return changed;
+        }
 
         function observePanelResize(panelEl) {
             if (!panelEl || !panelResizeObserver) return;
@@ -1318,6 +1400,16 @@
             } else {
                 panelEl.style.setProperty('--ph-h', header.offsetHeight + 'px');
             }
+            updatePanelHeaderSqueeze(panelEl, panelEl.getBoundingClientRect().width);
+        }
+
+        /* מצמצם בהדרגה את רצועת הכותרת של חלון לפי רוחבו האמיתי -
+           קודם רווחים, אחר כך תוויות טקסט, ורק בסוף גלישה לשורה שנייה (ב-CSS). */
+        function updatePanelHeaderSqueeze(panelEl, width) {
+            const header = panelEl && panelEl.querySelector('.panel-header');
+            if (!header) return;
+            header.classList.toggle('tight-gaps', width <= 460);
+            header.classList.toggle('hide-labels', width <= 360);
         }
 
         function createIconsSafe() {
@@ -1472,6 +1564,15 @@
             }
         }
 
+        /* טקסט המחוון תלוי בסביבה בכל פעם שהוא נכתב - לא רק פעם אחת בהפעלה,
+           כי saveCurrentState רץ בכל שמירה ודורס את מה שנכתב קודם */
+        function setSavedIndicatorText() {
+            const indicator = document.getElementById('saveIndicator');
+            if (!indicator) return;
+            const label = inOtzaria() ? 'נשמר באוצריא' : 'נשמר בדפדפן';
+            indicator.innerHTML = `<i data-lucide="check-circle" style="width:12px;"></i> ${label}`;
+        }
+
         function triggerAutoSave() {
             const indicator = document.getElementById('saveIndicator');
             if(indicator) indicator.innerHTML = `<i data-lucide="loader" style="width:12px;"></i> שומר...`;
@@ -1557,8 +1658,7 @@
             AppStore.setItem(STORAGE_KEY, JSON.stringify(appState));
             renderTabs();
 
-            const indicator = document.getElementById('saveIndicator');
-            if(indicator) indicator.innerHTML = `<i data-lucide="check-circle" style="width:12px;"></i> נשמר בדפדפן`;
+            setSavedIndicatorText();
             createIconsSafe();
 
             /* רענון חלונית הניווט אם היא פתוחה (הטקסט הראשי אולי השתנה) */
@@ -1599,7 +1699,7 @@
             if (closedBooks.length > 0) {
                 const closedSelect = document.createElement('select');
                 closedSelect.className = 'select-uniform';
-                closedSelect.style.cssText = 'background: rgba(255,255,255,0.1); color: #aaa; border: 1px solid rgba(255,255,255,0.2); margin-right: 6px;';
+                closedSelect.style.cssText = 'background: color-mix(in srgb, var(--header-text) 10%, transparent); color: color-mix(in srgb, var(--header-text) 65%, transparent); border: 1px solid color-mix(in srgb, var(--header-text) 20%, transparent); margin-right: 6px;';
                 closedSelect.onchange = (e) => { if (e.target.value) reopenBook(e.target.value); };
                 closedSelect.innerHTML = `<option value="">ספרים סגורים (${closedBooks.length})...</option>` +
                     closedBooks.map(b => `<option value="${b.id}">${b.title}</option>`).join('');
@@ -1726,7 +1826,7 @@
 
             panel.innerHTML = `
                 <div class="panel-header">
-                    <div style="display:flex; gap:2px; align-items:center;">
+                    <div class="panel-header-side">
                         <i data-lucide="layers" style="width:11px; color:var(--accent-color);"></i>
                         <span class="active-badge">פעיל</span>
                         <!-- בחירת סוג מספור -->
@@ -1744,7 +1844,7 @@
                             <option value="curly" ${bracketType==='curly'?'selected':''}>מסולסלים &#125; &#125;</option>
                         </select>
                         <button class="fmt-btn view-style-btn" data-style="boxed" style="height:18px; padding:1px 3px; font-size:9px;" onclick="toggleViewStyle('${areaId}', this)" title="סגנון תצוגה: תיבות / רצף / שורות">
-                            <i data-lucide="layout-grid" style="width:10px;"></i> <span>תיבות</span>
+                            <i data-lucide="layout-grid" style="width:10px;"></i> <span class="btn-label">תיבות</span>
                         </button>
                         <!-- גודל סימון המספור של ההערות (בסרגל הגלוי) -->
                         <button class="fmt-btn" style="height:18px; padding:1px 3px; font-size:9px;" onclick="zoomNoteNumbers('${areaId}', 1)" title="הגדל את סימון המספור של ההערות">א+</button>
@@ -1758,9 +1858,9 @@
                         <span class="editable-title" contenteditable="true" onblur="saveCurrentState(); updateHiddenPanelsMenu(); refreshIndex();">${title}</span>
                     </div>
 
-                    <div style="display:flex; gap:2px; align-items:center;">
-                        <button class="btn-uniform" style="padding:1px 4px; font-size:9px;" onclick="openMetaNoteWindow('${areaId}')" title="פתיחת חלון הערות חדש להערות על ההערות שבחלון זה"><i data-lucide="message-square-plus" style="width:9px;"></i> פתח חלון לחלון זה</button>
-                        <button class="btn-uniform" style="padding:1px 4px; font-size:9px;" onclick="resetPanelSize('${paneId}')" title="אפס גודל חלון"><i data-lucide="rotate-ccw" style="width:9px;"></i> אפס גודל</button>
+                    <div class="panel-header-side">
+                        <button class="btn-uniform" style="padding:1px 4px; font-size:9px;" onclick="openMetaNoteWindow('${areaId}')" title="פתיחת חלון הערות חדש להערות על ההערות שבחלון זה"><i data-lucide="message-square-plus" style="width:9px;"></i> <span class="btn-label">פתח חלון לחלון זה</span></button>
+                        <button class="btn-uniform" style="padding:1px 4px; font-size:9px;" onclick="resetPanelSize('${paneId}')" title="אפס גודל חלון"><i data-lucide="rotate-ccw" style="width:9px;"></i> <span class="btn-label">אפס גודל</span></button>
                         <button class="btn-uniform" style="color:#ff8a80; padding:1px 4px; font-size:9px;" onclick="confirmDeletePanel('${paneId}')" title="מחק חלון"><i data-lucide="trash-2" style="width:9px;"></i></button>
                         <button class="btn-uniform" style="color:#ffb74d; padding:1px 4px; font-size:9px;" onclick="hidePanel('${paneId}')" title="הסתר"><i data-lucide="eye-off" style="width:9px;"></i></button>
                     </div>
@@ -1861,6 +1961,8 @@
             const free = pickFreeNumbering();
             const newAreaId = 'notesArea_' + Date.now();
             createCommentaryPaneUI(newAreaId, 'חלון פירוש חדש', [], true, free.numType, free.bracketType, pickNextFontForNewPane());
+            equalizePanels();
+            applyOptionalSplit();
             saveCurrentState();
             createIconsSafe();
         }
@@ -1987,7 +2089,24 @@
                 }
             }
             if (selectEl) selectEl.setAttribute('data-prev', selectEl.value);
+            if (selectEl && selectEl.value === 'rashi') checkRashiFontLoaded();
             updatePanelNumbering(areaId);
+        }
+
+        /* בודק אם אחד מגופני כתב רש"י בפועל זמין (נטען מהרשת או מותקן מקומית).
+           אם לא - מזהיר שהתצוגה תיראה כמו כתב רגיל, כדי שהמשתמש יידע שזו
+           מגבלת גופן ולא באג במספור עצמו. */
+        let rashiFontWarningShown = false;
+        function checkRashiFontLoaded() {
+            if (rashiFontWarningShown || !window.document || !document.fonts || !document.fonts.check) return;
+            const candidates = ['Noto Rashi Hebrew', 'Nachlieli', 'Rashi', 'Guttman Rashi', 'Miriam Mono CLM Rashi', 'Keter Aram Tzova'];
+            const available = candidates.some(name => {
+                try { return document.fonts.check(`16px "${name}"`); } catch (e) { return false; }
+            });
+            if (!available) {
+                rashiFontWarningShown = true;
+                showToast('גופן כתב רש"י לא זמין כרגע (ייתכן שחסימת רשת מונעת את הטעינה מהאינטרנט, ואין גופן רש"י מותקן במחשב) - האותיות יוצגו בכתב רגיל עד שיימצא גופן מתאים.', true, 6000);
+            }
         }
 
         function updatePanelNumbering(areaId, shouldRefreshIndex = true) {
@@ -2050,6 +2169,10 @@
                     }
                 }
             });
+
+            /* אם החלון הזה כרגע מפוצל לשני חלונות נפרדים - יש לחלק מחדש את הפריטים,
+               כי sortNotesByMainTextOrder בתחילת הפונקציה השטיח אותם בחזרה ל-container */
+            if (container.classList.contains('split-active')) redistributeSplitBoxes(container);
 
             if (shouldRefreshIndex) refreshIndex();
             triggerAutoSave();
@@ -2427,7 +2550,7 @@
                     moveCount++;
                 }
             });
-            if(moveCount === 0) moveList.innerHTML = `<div class="context-menu-item" style="color:#aaa;">אין חלונות אחרים פתוחים</div>`;
+            if(moveCount === 0) moveList.innerHTML = `<div class="context-menu-item" style="color:color-mix(in srgb, var(--text-dark) 55%, transparent);">אין חלונות אחרים פתוחים</div>`;
 
             menu.style.display = 'block';
             menu.style.left = Math.max(10, e.clientX - menu.offsetWidth) + 'px';
@@ -2838,6 +2961,8 @@
                 suppressNextResizeAdjust();
                 panel.classList.add('hidden-panel');
                 updateHiddenPanelsMenu();
+                equalizePanels();
+                applyOptionalSplit();
             }
         }
 
@@ -2847,6 +2972,8 @@
                 suppressNextResizeAdjust();
                 panel.classList.remove('hidden-panel');
                 updateHiddenPanelsMenu();
+                equalizePanels();
+                applyOptionalSplit();
             }
         }
 
@@ -2869,7 +2996,6 @@
                 const title = panel.querySelector('.editable-title')?.innerText || 'חלון מוסטר';
                 const btn = document.createElement('button');
                 btn.className = 'btn-uniform';
-                btn.style.background = 'rgba(255,255,255,0.15)';
                 btn.innerHTML = `<i data-lucide="eye" style="width:10px;"></i> הצג ${title}`;
                 btn.onclick = () => restorePanel(panel.id);
                 hiddenContainer.appendChild(btn);
@@ -2985,6 +3111,7 @@
                             }
                         });
                     }
+                    unobservePanelResize(panel);
                     panel.remove();
                 }
             }
@@ -2993,6 +3120,8 @@
             saveCurrentState();
             refreshIndex();
             updateHiddenPanelsMenu();
+            equalizePanels();
+            applyOptionalSplit();
         }
 
         /* ---------- LAYOUT, RATIO & UTILITIES ---------- */
@@ -3061,28 +3190,12 @@
             }
         }
 
-        const LAYOUT_ICONS = {
-            'layout-shurot': 'rows-3',
-            'layout-torim': 'columns-3',
-            'layout-tor-v-shurot': 'panel-right',
-            'layout-shura-v-torim': 'panel-top',
-            'layout-daf': 'book-open'
-        };
-
         function setLayout(layoutName) {
             const wrapper = document.getElementById('panelsWrapper');
             if (!wrapper) return;
 
             wrapper.classList.remove('layout-shurot', 'layout-torim', 'layout-tor-v-shurot', 'layout-shura-v-torim', 'layout-daf');
             wrapper.classList.add(layoutName);
-
-            /* עדכון האייקון בהתאם למצב הנבחר */
-            const icon = document.getElementById('layoutIcon');
-            if (icon) {
-                icon.setAttribute('data-lucide', LAYOUT_ICONS[layoutName] || 'layout-grid');
-                icon.innerHTML = '';
-                createIconsSafe();
-            }
 
             const ratioSelect = document.getElementById('ratioSelect');
             if (ratioSelect) {
@@ -3117,18 +3230,27 @@
 
             const share = 1 / (panels.length + 1);
 
+            /* flex-basis חייב להיות 'auto' (ולא 0 או אחוז) - אחרת גרירת שינוי הגודל
+               הטבעית של הדפדפן (שקובעת height/width מפורש על האלמנט) מתעלמת ממנה
+               לגמרי, כי אלגוריתם ה-flex תמיד מחשב מחדש מ-flex-basis+grow/shrink
+               ומתעלם מגודל מפורש כשה-basis אינו auto. זו הייתה הסיבה שגרירה שינתה
+               רק את הרוחב (הציר הצולב, שאינו כפוף ל-flex-basis כלל) ולא את הגובה
+               (הציר הראשי, שם ה-basis הקבוע "ניצח" כל גרירה). */
+            const panelShare = (100 / (panels.length || 1)).toFixed(2) + '%';
+
             if (layout === 'layout-shurot' || layout === 'layout-tor-v-shurot') {
                 /* חלוקה אנכית */
                 if (layout === 'layout-shurot') {
-                    mainPanel.style.flex = `1 1 ${(share * 100).toFixed(2)}%`;
+                    mainPanel.style.flex = '1 1 auto';
                     mainPanel.style.height = `${(share * 100).toFixed(2)}%`;
                 }
-                if (commWrapper) commWrapper.style.flex = `1 1 ${((1 - share) * 100).toFixed(2)}%`;
-                panels.forEach(p => { p.style.flex = '1 1 0'; p.style.height = ''; });
+                if (commWrapper) commWrapper.style.flex = '1 1 auto';
+                panels.forEach(p => { p.style.flex = '1 1 auto'; p.style.height = panelShare; });
             } else {
-                mainPanel.style.flex = `1 1 ${(share * 100).toFixed(2)}%`;
-                if (commWrapper) commWrapper.style.flex = `1 1 ${((1 - share) * 100).toFixed(2)}%`;
-                panels.forEach(p => { p.style.flex = '1 1 0'; p.style.width = ''; });
+                mainPanel.style.flex = '1 1 auto';
+                mainPanel.style.width = `${(share * 100).toFixed(2)}%`;
+                if (commWrapper) commWrapper.style.flex = '1 1 auto';
+                panels.forEach(p => { p.style.flex = '1 1 auto'; p.style.width = panelShare; });
             }
         }
 
@@ -3147,8 +3269,8 @@
             if (btn) {
                 btn.classList.toggle('active', !!mainLineMode);
                 btn.innerHTML = mainLineMode
-                    ? '<i data-lucide="rows-3" style="width:10px;"></i> <span>הצגה לפי מזהה</span>'
-                    : '<i data-lucide="align-justify" style="width:10px;"></i> <span>הצגה ברצף</span>';
+                    ? '<i data-lucide="rows-3" style="width:10px;"></i> <span class="btn-label">הצגה לפי מזהה</span>'
+                    : '<i data-lucide="align-justify" style="width:10px;"></i> <span class="btn-label">הצגה ברצף</span>';
                 createIconsSafe();
             }
 
@@ -3194,26 +3316,89 @@
             });
         }
 
-        /* ---------- פיצול אוטומטי של חלון הערות יחיד ----------
-           ברגע שנבחרת פריסה עם טורים/שורות ("שורה וטורים" או "צורת הדף") ויש חלון הערות
-           יחיד בלבד, הוא מתפצל אוטומטית לשני טורים המשכיים - ללא צורך בפעולה ידנית. */
+        /* ---------- פיצול אוטומטי של חלון הערות יחיד לשני חלונות נפרדים ----------
+           ברגע שנבחרת פריסה עם טורים/שורות ("שורה וטורים" או "צורת הדף") ויש חלון
+           הערות יחיד בלבד, הוא מתפצל אוטומטית לשני קופסאות עצמאיות: הראשונה בימין,
+           והשנייה משמאלה מהווה את ההמשך הישיר שלה - בדיוק איפה שהטקסט נגמר בראשונה
+           הוא ממשיך בשנייה. הפריטים (commentary-item) הם אותם אלמנטים ממש שעוברים
+           בין שתי הקופסאות (לא עותקים), ושתיהן עדיין צאצאים של אותו #areaId עצמו -
+           כך שכל הלוגיקה הקיימת (מספור, שמירה, אינדקס, חיפוש) ממשיכה לעבוד בלי שינוי,
+           כי querySelectorAll('.commentary-item') מוצא אותם בכל עומק קינון. */
 
-        /* מפצל את ההערות של חלון יחיד לשני טורים המשכיים: ראשית בימין, המשך בשמאל.
-           מיושם ב-CSS בלבד (טורים), ולכן אינו משנה נתונים ואינו מכביד. */
-        function applyOptionalSplit() {
+        function isSplitEligibleLayout() {
             const wrapper = document.getElementById('panelsWrapper');
-            if (!wrapper) return;
+            if (!wrapper) return false;
             const layout = [...wrapper.classList].find(c => c.startsWith('layout-')) || '';
             const panels = document.querySelectorAll('.commentary-panel:not(.hidden-panel)');
+            return panels.length === 1 && (layout === 'layout-shura-v-torim' || layout === 'layout-daf');
+        }
 
-            document.querySelectorAll('.commentary-container').forEach(c => c.classList.remove('split-columns'));
+        /* מפרק קופסאות פיצול קיימות בחזרה למכל הרגיל (משטח את הפריטים ישירות לתוך
+           #areaId, בסדר הנוכחי שלהם), ומסיר את המחלקה - חוזר להתנהגות של חלון יחיד רגיל */
+        function unsplitContainer(container) {
+            const boxes = container.querySelectorAll('.split-box');
+            if (!boxes.length) { container.classList.remove('split-active'); return; }
+            const items = Array.from(container.querySelectorAll('.commentary-item'));
+            items.forEach(it => container.appendChild(it));
+            boxes.forEach(b => b.remove());
+            container.classList.remove('split-active');
+        }
 
-            const eligible = panels.length === 1 &&
-                             (layout === 'layout-shura-v-torim' || layout === 'layout-daf');
-            if (eligible) {
-                const container = panels[0].querySelector('.commentary-container');
-                if (container) container.classList.add('split-columns');
+        /* יוצר (אם צריך) את שתי קופסאות הפיצול, ומחלק אליהן מחדש את הפריטים לפי
+           גובה בפועל: כל הפריטים נמדדים בזרימה רציפה בקופסה הראשונה, ואיפה שהגובה
+           המצטבר עובר את מחצית הגובה הכולל - שם עובר קו החיתוך לקופסה השנייה. */
+        function redistributeSplitBoxes(container) {
+            let box1 = container.querySelector('.split-box[data-part="1"]');
+            let box2 = container.querySelector('.split-box[data-part="2"]');
+
+            if (!box1 || !box2) {
+                container.querySelectorAll('.split-box').forEach(b => b.remove());
+                box1 = document.createElement('div');
+                box1.className = 'split-box';
+                box1.setAttribute('data-part', '1');
+                box2 = document.createElement('div');
+                box2.className = 'split-box';
+                box2.setAttribute('data-part', '2');
+                container.appendChild(box1);
+                container.appendChild(box2);
             }
+
+            /* איסוף כל הפריטים (מכל מקום שהם נמצאים כרגע) לפי הסדר הלוגי הנוכחי */
+            const items = Array.from(container.querySelectorAll('.commentary-item'));
+            items.forEach(it => box1.appendChild(it));
+            box2.innerHTML = '';
+
+            if (items.length <= 1) return; /* אין טעם לפצל פריט בודד */
+
+            const totalHeight = box1.scrollHeight;
+            const half = totalHeight / 2;
+            let splitIndex = items.length;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].offsetTop >= half) { splitIndex = i; break; }
+            }
+            if (splitIndex === 0) splitIndex = 1; /* לא משאירים את הקופסה הראשונה ריקה */
+
+            for (let i = splitIndex; i < items.length; i++) box2.appendChild(items[i]);
+        }
+
+        /* נקודת הכניסה היחידה: נקראת אחרי כל שינוי מבני (מספור מחדש, שינוי פריסה,
+           הוספה/הסתרה/מחיקה של חלון) ומחליטה אם לפצל ואת מי */
+        function applyOptionalSplit() {
+            const eligible = isSplitEligibleLayout();
+            document.querySelectorAll('.commentary-container').forEach(container => {
+                if (eligible && container === getSoleOpenCommentaryContainer()) {
+                    container.classList.add('split-active');
+                    redistributeSplitBoxes(container);
+                } else if (container.classList.contains('split-active')) {
+                    unsplitContainer(container);
+                }
+            });
+        }
+
+        function getSoleOpenCommentaryContainer() {
+            const panels = document.querySelectorAll('.commentary-panel:not(.hidden-panel)');
+            if (panels.length !== 1) return null;
+            return panels[0].querySelector('.commentary-container');
         }
 
         function toggleToolbar(toolbarId, btn) {
@@ -3242,7 +3427,7 @@
             const target = btn || document.getElementById('panel_' + areaId)?.querySelector('.view-style-btn');
             if (target) {
                 const m = VIEW_STYLE_META[style];
-                target.innerHTML = `<i data-lucide="${m.icon}" style="width:10px;"></i> <span>${m.label}</span>`;
+                target.innerHTML = `<i data-lucide="${m.icon}" style="width:10px;"></i> <span class="btn-label">${m.label}</span>`;
                 target.setAttribute('data-style', style);
             }
             createIconsSafe();
