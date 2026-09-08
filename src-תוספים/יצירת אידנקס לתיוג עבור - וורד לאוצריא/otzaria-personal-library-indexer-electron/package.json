@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "npm run build && electron .",
     "gen-fixtures": "node scripts/generate-fixtures.js",
-    "test-core": "npm run build && npm run gen-fixtures && node scripts/test-core-standalone.js"
+    "test-core": "npm run build && npm run gen-fixtures && node scripts/test-core-standalone.js",
+    "dist": "npm run build && electron-builder --win portable --x64"
   },
   "license": "UNLICENSED",
   "dependencies": {
@@ -19,7 +20,29 @@
   "devDependencies": {
     "@types/node": "^20.14.10",
     "electron": "^31.3.0",
+    "electron-builder": "^26.15.3",
     "pdf-lib": "^1.17.1",
     "typescript": "^5.5.3"
+  },
+  "build": {
+    "appId": "com.otzaria-tools.personal-library-indexer",
+    "productName": "סורק ספרייה אישית לאוצריא",
+    "asar": true,
+    "files": [
+      "dist/**/*",
+      "renderer/**/*",
+      "build-assets/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "icon": "build-assets/icon.ico",
+      "target": ["portable"]
+    },
+    "portable": {
+      "artifactName": "סורק-ספרייה-אישית-לאוצריא.exe"
+    }
   }
 }
