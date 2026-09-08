@@ -1,0 +1,24 @@
+{
+  "name": "otzaria-personal-library-indexer-web",
+  "version": "1.0.0",
+  "description": "גרסת דפדפן (שרת מקומי + עמוד HTML) לכלי סריקת ספרייה אישית של אוצריא - אותה לוגיקת ליבה כמו הכלי בשורת הפקודה, אך עם ממשק חזותי בעברית במקום שאלות readline.",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run build && node dist/server.js",
+    "serve": "node dist/server.js",
+    "gen-fixtures": "node scripts/generate-fixtures.js",
+    "verify": "npm run build && npm run gen-fixtures && node scripts/verify-e2e.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "docx": "^9.0.2",
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^4.6.82"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "pdf-lib": "^1.17.1",
+    "typescript": "^5.5.3"
+  }
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
+  <title>אינדקס ספרייה אישית - אוצריא</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>אינדקס ספרייה אישית לאוצריא</h1>
+      <p class="subtitle">
+        סורק תיקיית ספרים (Word / PDF), מוסיף סימניות לכותרות שחסרות בהן, בונה מסמכי-מלווה
+        לקבצי PDF עם תוכן עניינים, וכותב קובץ מיפוי personal-library-index.json.
+      </p>
+    </header>
+
+    <!-- שלב 1: בחירת תיקייה -->
+    <section id="step-pick" class="panel">
+      <div class="row">
+        <button id="btn-choose-folder">בחר תיקייה...</button>
+        <input id="folder-path" type="text" placeholder="לא נבחרה תיקייה" readonly />
+        <button id="btn-start-scan" disabled>התחל סריקה</button>
+      </div>
+      <div class="row">
+        <label for="output-subfolder">תיקיית פלט (בתוך התיקייה הנסרקת):</label>
+        <input id="output-subfolder" type="text" value="_אינדקס_אישי" />
+      </div>
+      <p class="hint">הסריקה רקורסיבית - כוללת גם תת-תיקיות (חוץ מ-node_modules, .git, ותיקיית הפלט עצמה).</p>
+      <p class="hint">
+        כל התוצרים שהכלי יוצר (מסמכים-מלווים ל-PDF, קבצי links.json, וקובץ המיפוי
+        personal-library-index.json) נשמרים בתוך תיקיית הפלט הזו, בשורש התיקייה הנסרקת - ולא
+        מפוזרים בתוך תת-התיקיות המקוריות של הספרים.
+      </p>
+    </section>
+
+    <!-- שלב 2: התקדמות -->
+    <section id="step-progress" class="panel" hidden>
+      <div class="row" style="justify-content: space-between;">
+        <strong>מתבצעת סריקה...</strong>
+        <span id="progress-status" class="hint"></span>
+      </div>
+      <div id="log"></div>
+    </section>
+
+    <!-- שלב 3: סיכום -->
+    <section id="step-summary" class="panel" hidden>
+      <h2 style="margin-top:0;">הסריקה הושלמה</h2>
+      <div class="stat-grid" id="summary-grid"></div>
+      <div class="row">
+        <button id="btn-open-folder">הצג את קובץ האינדקס בסייר הקבצים</button>
+        <button id="btn-rescan" class="secondary">סרוק תיקייה נוספת</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- מודל: החלטה על כותרות בלי סימנייה -->
+  <div id="bookmark-modal" class="modal-backdrop" hidden>
+    <div class="modal">
+      <h2>נמצאו כותרות בלי סימנייה</h2>
+      <p>
+        בקובץ <span class="filename" id="modal-filename"></span> נמצאו
+        <strong id="modal-count"></strong> כותרות (Heading) בלי סימנייה (bookmark).
+        מה לעשות?
+      </p>
+      <div class="choices">
+        <button id="choice-source">הוסף למקור (עורך את הקובץ המקורי)</button>
+        <button id="choice-copy" class="secondary">העתק לקובץ חדש (עם הסיומת "- עם סימניות")</button>
+        <button id="choice-skip" class="secondary">דלג על קובץ זה כרגע</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

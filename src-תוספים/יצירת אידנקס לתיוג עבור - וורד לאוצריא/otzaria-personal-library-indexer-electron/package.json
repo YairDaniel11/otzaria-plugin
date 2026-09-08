@@ -1,0 +1,25 @@
+{
+  "name": "otzaria-personal-library-indexer-electron",
+  "version": "1.0.0",
+  "description": "אפליקציית שולחן עבודה (Electron) לסריקת ספרייה אישית (Word/PDF), הוספת סימניות לכותרות ב-Word, יצירת ספר-מלווה ל-PDF ובניית קובץ מיפוי - עם ממשק גרפי בעברית במקום שורת פקודה.",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "npm run build && electron .",
+    "gen-fixtures": "node scripts/generate-fixtures.js",
+    "test-core": "npm run build && npm run gen-fixtures && node scripts/test-core-standalone.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "docx": "^9.0.2",
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^4.6.82"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "electron": "^31.3.0",
+    "pdf-lib": "^1.17.1",
+    "typescript": "^5.5.3"
+  }
+}
