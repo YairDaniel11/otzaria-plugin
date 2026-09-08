@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-08T13:44:03.309Z",
+  "books": [
+    {
+      "title": "doc-full",
+      "kind": "word",
+      "sourcePath": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\doc-full.docx",
+      "headings": [
+        {
+          "index": 0,
+          "text": "כותרת עם סימנייה",
+          "bookmark": "bm_full_1"
+        }
+      ]
+    },
+    {
+      "title": "doc-mixed",
+      "kind": "word",
+      "sourcePath": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\doc-mixed.docx",
+      "headings": [
+        {
+          "index": 0,
+          "text": "פרק ראשון",
+          "bookmark": "h_0_heading"
+        },
+        {
+          "index": 1,
+          "text": "תת פרק עם סימנייה קיימת",
+          "bookmark": "existing_bm_1"
+        },
+        {
+          "index": 2,
+          "text": "פרק שני בלי סימנייה",
+          "bookmark": "h_2_heading"
+        }
+      ]
+    },
+    {
+      "title": "sample - אינדקס",
+      "kind": "pdf-companion",
+      "sourcePath": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\sample - אינדקס.docx",
+      "pdfPath": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\sample.pdf",
+      "headings": [
+        {
+          "index": 0,
+          "text": "פרק א",
+          "page": 1
+        },
+        {
+          "index": 1,
+          "text": "פרק ב",
+          "page": 3
+        },
+        {
+          "index": 2,
+          "text": "פרק ב - תת סעיף מקונן",
+          "page": 4
+        },
+        {
+          "index": 3,
+          "text": "פרק ג - תת סעיף",
+          "page": 5
+        }
+      ]
+    },
+    {
+      "title": "doc-none - עם סימניות",
+      "kind": "word",
+      "sourcePath": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\sub\\doc-none - עם סימניות.docx",
+      "headings": [
+        {
+          "index": 0,
+          "text": "מבוא",
+          "bookmark": "h_0_heading"
+        },
+        {
+          "index": 1,
+          "text": "סעיף א",
+          "bookmark": "h_1_heading"
+        },
+        {
+          "index": 2,
+          "text": "סעיף ב",
+          "bookmark": "h_2_heading"
+        }
+      ]
+    }
+  ]
+}

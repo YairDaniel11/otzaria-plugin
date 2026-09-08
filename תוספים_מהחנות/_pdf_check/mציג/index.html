@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>צופה PDF עם OCR</title>
+<style>
+  :root{
+    --color-primary:#6750A4; --color-on-primary:#FFFFFF;
+    --color-secondary:#625B71; --color-on-secondary:#FFFFFF;
+    --color-surface:#FFFBFE; --color-on-surface:#1C1B1F;
+    --color-surface-container-highest:#E6E0E9;
+    --color-error:#B3261E; --color-on-error:#FFFFFF;
+    --color-outline:#79747E;
+    --color-primary-subtle:rgba(103,80,164,0.12);
+    --color-secondary-subtle:rgba(98,91,113,0.12);
+    --font-main:'Frank Ruhl Libre','David',sans-serif;
+    --font-size-base:13px; --line-height:1.5;
+    --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;width:100%;font-family:var(--font-main);
+    font-size:var(--font-size-base);line-height:var(--line-height);
+    background:var(--color-surface);color:var(--color-on-surface);}
+  #app{display:flex;flex-direction:column;height:100vh;width:100vw;overflow:hidden;}
+
+  #toolbar{display:flex;align-items:center;gap:6px;padding:8px 10px;
+    background:var(--color-surface);border-bottom:1px solid var(--color-outline);
+    flex-wrap:wrap;flex-shrink:0;}
+  #toolbar .filename{font-weight:600;max-width:220px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;font-size:0.85em;}
+  #toolbar .spacer{flex:1;}
+  #page-info{font-size:0.85em;white-space:nowrap;padding:0 4px;}
+
+  button{font-family:inherit;font-size:0.8em;border:1px solid var(--color-outline);
+    background:var(--color-secondary-subtle);color:var(--color-on-surface);
+    padding:7px 11px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;
+    transition:opacity .15s;}
+  button:hover{opacity:0.85;}
+  button:disabled{opacity:0.4;cursor:default;}
+  button.primary{background:var(--color-primary);color:var(--color-on-primary);border-color:var(--color-primary);}
+  button.icon-only{padding:7px 9px;}
+
+  #lightbulb-btn{background:none;border:none;font-size:1.1em;padding:4px 8px;}
+
+  #body{flex:1;display:flex;overflow:hidden;position:relative;}
+  #viewer-area{flex:1;overflow:auto;display:flex;justify-content:center;
+    background:var(--color-surface-container-highest);padding:16px;}
+  #pdf-canvas{background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);max-width:100%;height:fit-content;}
+
+  #dropzone{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:12px;text-align:center;padding:24px;
+    border:2px dashed var(--color-outline);margin:14px;border-radius:var(--radius-lg);
+    color:var(--color-secondary);}
+  #dropzone.dragover{background:var(--color-primary-subtle);border-color:var(--color-primary);}
+  #dropzone .icon{font-size:40px;}
+  #dropzone .hint{font-size:0.8em;opacity:.75;}
+
+  #textpanel{width:0;overflow:hidden;background:var(--color-surface);
+    border-inline-start:1px solid var(--color-outline);transition:width .18s ease;
+    flex-shrink:0;display:flex;flex-direction:column;}
+  #textpanel.open{width:320px;}
+  #textpanel .panel-header{padding:10px 12px;font-weight:700;font-size:0.85em;
+    border-bottom:1px solid var(--color-outline);display:flex;align-items:center;gap:8px;}
+  #textpanel .panel-header .spacer{flex:1;}
+  #text-output{flex:1;overflow-y:auto;padding:12px;font-size:0.85em;white-space:pre-wrap;
+    user-select:text;direction:rtl;}
+  #text-empty{padding:14px;font-size:0.8em;color:var(--color-secondary);text-align:center;}
+
+  #about-toggle{position:fixed;top:50%;left:0;transform:translateY(-50%);writing-mode:vertical-rl;
+    background:var(--color-primary);color:var(--color-on-primary);border:none;padding:10px 6px;
+    border-radius:0 var(--radius-sm) var(--radius-sm) 0;cursor:pointer;z-index:20;font-size:0.75em;}
+  #about-panel{position:fixed;top:0;left:-320px;width:300px;height:100%;background:var(--color-surface);
+    border-inline-end:1px solid var(--color-outline);box-shadow:2px 0 12px rgba(0,0,0,.15);
+    transition:left .2s ease;z-index:19;padding:20px;overflow-y:auto;font-size:0.85em;}
+  #about-panel.open{left:0;}
+  #about-panel h3{margin-top:0;}
+  #diag-box{font-size:0.85em;background:var(--color-surface-container-highest);
+    border:1px solid var(--color-outline);border-radius:var(--radius-sm);padding:10px;
+    white-space:pre-wrap;word-break:break-all;max-height:160px;overflow-y:auto;}
+  .setup-box{font-size:0.8em;background:var(--color-surface-container-highest);
+    border:1px solid var(--color-outline);border-radius:var(--radius-sm);padding:10px;
+    word-break:break-all;margin:6px 0;}
+  .setup-box code{user-select:all;}
+
+  .popover-anchor{position:relative;display:inline-block;}
+  #recent-popover{position:absolute;top:calc(100% + 6px);right:0;width:280px;
+    background:var(--color-surface-container-highest);border-radius:var(--radius-md);
+    box-shadow:0 4px 20px rgba(0,0,0,.15);border:1px solid var(--color-outline);
+    padding:10px;z-index:200;opacity:0;transform:translateY(-6px) scale(.97);
+    pointer-events:none;transition:opacity .15s,transform .15s;max-height:320px;overflow-y:auto;}
+  #recent-popover.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+  #recent-popover .rec-header{display:flex;align-items:center;font-size:0.8em;font-weight:700;margin-bottom:6px;}
+  #recent-popover .rec-header .spacer{flex:1;}
+  #recent-popover .rec-header button{padding:3px 8px;font-size:0.85em;}
+  #recent-list{list-style:none;margin:0;padding:0;}
+  #recent-list li{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:var(--radius-sm);
+    cursor:pointer;background:var(--color-surface);border:1px solid var(--color-outline);margin-bottom:4px;}
+  #recent-list li:hover{background:var(--color-secondary-subtle);}
+  #recent-list li .rec-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:0.8em;}
+  #recent-list li button{padding:2px 6px;font-size:0.75em;}
+  #recent-empty{font-size:0.8em;color:var(--color-secondary);text-align:center;padding:10px;}
+
+  #status{position:fixed;bottom:14px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--color-on-surface);color:var(--color-surface);padding:8px 16px;
+    border-radius:var(--radius-md);font-size:0.8em;opacity:0;
+    transition:opacity .2s ease,transform .2s ease;pointer-events:none;z-index:30;}
+  #status.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  #ocr-progress{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+    background:var(--color-primary);color:var(--color-on-primary);padding:8px 16px;
+    border-radius:var(--radius-md);font-size:0.8em;z-index:31;display:none;}
+
+  input[type="file"]{display:none;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="toolbar">
+    <button class="primary" id="btn-open">📂 פתיחת קובץ</button>
+    <span class="popover-anchor">
+      <button id="btn-recent" title="קבצים אחרונים">🕘 אחרונים</button>
+      <div id="recent-popover">
+        <div class="rec-header"><span>קבצים אחרונים</span><div class="spacer"></div><button id="btn-recent-clear">נקה</button></div>
+        <ul id="recent-list"></ul>
+        <div id="recent-empty">אין עדיין קבצים אחרונים</div>
+      </div>
+    </span>
+    <span class="filename" id="current-name">לא נבחר קובץ</span>
+    <button id="btn-prev" class="icon-only" disabled>▶</button>
+    <span id="page-info">-</span>
+    <button id="btn-next" class="icon-only" disabled>◀</button>
+    <button id="btn-zoom-out" class="icon-only" disabled>🔍-</button>
+    <button id="btn-zoom-in" class="icon-only" disabled>🔍+</button>
+    <button id="btn-embedded-text" disabled>📝 טקסט מוטבע</button>
+    <button id="btn-ocr" disabled>🔎 OCR לעמוד</button>
+    <div class="spacer"></div>
+    <button id="lightbulb-btn" title="שליחת משוב על התוסף">💡 להארות</button>
+  </div>
+
+  <div id="body">
+    <div id="viewer-area">
+      <canvas id="pdf-canvas" style="display:none;"></canvas>
+      <iframe id="html-frame" sandbox="" style="display:none;width:100%;height:100%;border:none;background:#fff;"></iframe>
+      <div id="dropzone">
+        <div class="icon">📄</div>
+        <div><strong>גררי לכאן קובץ</strong> או לחצי על "פתיחת קובץ" למעלה</div>
+        <div class="hint">אפשר לפתוח PDF, תמונה או קובץ טקסט ישירות, בלי להוסיף אותו לספרייה</div>
+      </div>
+    </div>
+    <div id="textpanel">
+      <div class="panel-header">
+        <span id="text-panel-title">טקסט</span>
+        <div class="spacer"></div>
+        <button id="btn-copy-text">העתקה</button>
+        <button id="btn-close-panel" class="icon-only">✕</button>
+      </div>
+      <div id="text-output"></div>
+      <div id="text-empty">אין עדיין טקסט להצגה</div>
+    </div>
+  </div>
+
+  <button id="about-toggle">💡 אודות</button>
+  <div id="about-panel">
+    <h3>צופה PDF עם OCR</h3>
+    <p>פתיחת קבצי PDF, תמונה או טקסט באוצריא ישירות, ללא צורך להוסיף אותם לספרייה. לתמונות ולעמודי PDF סרוקים ללא שכבת טקסט - ניתן להריץ זיהוי טקסט (OCR) בעברית לפי דרישה.</p>
+    <p style="font-size:0.85em;opacity:.7;">נוצר באמצעות Claude ע"י חד בדרא</p>
+    <hr style="border:none;border-top:1px solid var(--color-outline);margin:16px 0;">
+    <h3 style="font-size:1em;">⚙️ הפעלת OCR (חד-פעמי)</h3>
+    <p style="font-size:0.8em;">מנוע ה-OCR ושפת העברית לא כלולים בתוסף (קבצים כבדים). כדי להפעיל OCR יש להוריד פעם אחת שני קבצים ולשים בתיקיית התוסף המותקן:</p>
+    <p style="font-size:0.78em;margin-bottom:2px;"><strong>1. מנוע ה-OCR</strong> → לשמור בתוך <code>vendor\tesseract-core-simd-lstm.wasm</code></p>
+    <div class="setup-box"><code>https://unpkg.com/tesseract.js-core@5.0.0/tesseract-core-simd-lstm.wasm</code></div>
+    <p style="font-size:0.78em;margin-bottom:2px;"><strong>2. שפה עברית</strong> → לשמור בתוך <code>vendor\lang-data\heb.traineddata</code></p>
+    <div class="setup-box"><code>https://github.com/tesseract-ocr/tessdata_fast/raw/main/heb.traineddata</code></div>
+    <p style="font-size:0.75em;opacity:.75;">מיקום תיקיית ההתקנה בוינדוס: <code>C:\Users\%USERNAME%\AppData\Roaming\otzaria\plugins\installed\com.chadbedera.pdfviewer\current\</code>. אפשר לבדוק שהקבצים זוהו נכון תחת "אבחון" למטה.</p>
+    <p style="font-size:0.75em;opacity:.75;">אם רוצים גישה למנוע ה-OCR המובנה של Windows בעתיד, זה ידרוש בקשת פיצ'ר לאוצריא עצמה (התוסף לא יכול לעשות את זה בכוחות עצמו) — שהיא תוסיף permission חדשה שקוראת ל-OCR הנייטיבי מצד ה-Dart/Flutter וחושפת אותה כ-API לתוספים. בינתיים Tesseract.js הוא האפשרות היחידה שזמינה לתוסף.</p>
+    <hr style="border:none;border-top:1px solid var(--color-outline);margin:16px 0;">
+    <details id="diag-details">
+      <summary style="cursor:pointer;font-weight:600;font-size:0.85em;">🔧 אבחון</summary>
+      <p style="font-size:0.8em;opacity:.8;margin-top:8px;">מצב מנוע ה-OCR:</p>
+      <div id="diag-box">טרם נבדק</div>
+      <button id="btn-diag-refresh" style="margin-top:8px;width:100%;">🔄 בדיקה מחדש</button>
+    </details>
+  </div>
+
+  <input type="file" id="file-input">
+  <div id="status"></div>
+  <div id="ocr-progress"></div>
+</div>
+
+<script src="./vendor/pdf.min.js"></script>
+<script src="./vendor/tesseract.min.js"></script>
+<script src="./vendor/jszip.min.js"></script>
+<script src="./vendor/UTIF.js"></script>
+<script>
+(function(){
+"use strict";
+pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.js';
+
+const els = {
+  open: document.getElementById('btn-open'),
+  fileInput: document.getElementById('file-input'),
+  currentName: document.getElementById('current-name'),
+  prev: document.getElementById('btn-prev'),
+  next: document.getElementById('btn-next'),
+  pageInfo: document.getElementById('page-info'),
+  zoomOut: document.getElementById('btn-zoom-out'),
+  zoomIn: document.getElementById('btn-zoom-in'),
+  embeddedText: document.getElementById('btn-embedded-text'),
+  ocrBtn: document.getElementById('btn-ocr'),
+  lightbulb: document.getElementById('lightbulb-btn'),
+  canvas: document.getElementById('pdf-canvas'),
+  htmlFrame: document.getElementById('html-frame'),
+  dropzone: document.getElementById('dropzone'),
+  viewerArea: document.getElementById('viewer-area'),
+  textpanel: document.getElementById('textpanel'),
+  textPanelTitle: document.getElementById('text-panel-title'),
+  textOutput: document.getElementById('text-output'),
+  textEmpty: document.getElementById('text-empty'),
+  copyText: document.getElementById('btn-copy-text'),
+  closePanel: document.getElementById('btn-close-panel'),
+  aboutToggle: document.getElementById('about-toggle'),
+  aboutPanel: document.getElementById('about-panel'),
+  diagBox: document.getElementById('diag-box'),
+  diagRefresh: document.getElementById('btn-diag-refresh'),
+  status: document.getElementById('status'),
+  ocrProgress: document.getElementById('ocr-progress'),
+  recentBtn: document.getElementById('btn-recent'),
+  recentPopover: document.getElementById('recent-popover'),
+  recentList: document.getElementById('recent-list'),
+  recentEmpty: document.getElementById('recent-empty'),
+  recentClear: document.getElementById('btn-recent-clear')
+};
+
+function esc(s){ const d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+
+function showStatus(msg){
+  els.status.textContent = msg;
+  els.status.classList.add('show');
+  clearTimeout(showStatus._t);
+  showStatus._t = setTimeout(() => els.status.classList.remove('show'), 2500);
+}
+
+// ===== Otzaria storage (small settings only, e.g. zoom level) =====
+function storageGet(key){
+  if (!(window.Otzaria && typeof Otzaria.call === 'function')) return Promise.resolve(null);
+  return Otzaria.call('storage.get', { key }).then(res => (res && res.data !== undefined ? res.data : null)).catch(() => null);
+}
+function storageSet(key, value){
+  if (!(window.Otzaria && typeof Otzaria.call === 'function')) return Promise.resolve();
+  return Otzaria.call('storage.set', { key, value }).catch(() => {});
+}
+
+// ===== Recent files (IndexedDB - stores file handles so real reopening works) =====
+const RECENTS_LIMIT = 10;
+let recentsDbPromise = null;
+function recentsDb(){
+  if (recentsDbPromise) return recentsDbPromise;
+  recentsDbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open('pdfviewer-recents', 1);
+    req.onupgradeneeded = () => req.result.createObjectStore('files', { keyPath: 'id' });
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return recentsDbPromise;
+}
+async function idbGetAll(){
+  try {
+    const db = await recentsDb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readonly');
+      const req = tx.objectStore('files').getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch(e){ return []; }
+}
+async function idbPut(entry){
+  try {
+    const db = await recentsDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite');
+      tx.objectStore('files').put(entry);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e){}
+}
+async function idbDelete(id){
+  try {
+    const db = await recentsDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite');
+      tx.objectStore('files').delete(id);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e){}
+}
+async function idbClear(){
+  try {
+    const db = await recentsDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite');
+      tx.objectStore('files').clear();
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch(e){}
+}
+
+async function addRecent(name, size, handle){
+  const all = await idbGetAll();
+  const existing = all.find(r => r.name === name && r.size === size);
+  const id = existing ? existing.id : (Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+  await idbPut({ id, name, size, lastOpened: Date.now(), handle: handle || (existing && existing.handle) || null });
+  const updated = await idbGetAll();
+  if (updated.length > RECENTS_LIMIT){
+    updated.sort((a,b) => a.lastOpened - b.lastOpened);
+    for (const old of updated.slice(0, updated.length - RECENTS_LIMIT)) await idbDelete(old.id);
+  }
+  renderRecents();
+}
+
+function formatSize(bytes){
+  if (!bytes) return '';
+  if (bytes < 1024*1024) return Math.round(bytes/1024) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+async function renderRecents(){
+  const all = await idbGetAll();
+  all.sort((a,b) => b.lastOpened - a.lastOpened);
+  els.recentList.innerHTML = '';
+  els.recentEmpty.style.display = all.length ? 'none' : 'block';
+  all.forEach(entry => {
+    const li = document.createElement('li');
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'rec-name';
+    nameSpan.textContent = entry.name + (entry.size ? ' (' + formatSize(entry.size) + ')' : '');
+    nameSpan.title = entry.name;
+    li.appendChild(nameSpan);
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '✕';
+    delBtn.addEventListener('click', async ev => {
+      ev.stopPropagation();
+      await idbDelete(entry.id);
+      renderRecents();
+    });
+    li.appendChild(delBtn);
+    li.addEventListener('click', () => openRecentEntry(entry));
+    els.recentList.appendChild(li);
+  });
+}
+
+async function openRecentEntry(entry){
+  els.recentPopover.classList.remove('open');
+  if (!entry.handle){
+    showStatus('יש לבחור את "' + entry.name + '" מחדש בבורר הקבצים');
+    els.fileInput.value = '';
+    els.fileInput.click();
+    return;
+  }
+  try {
+    if ((await entry.handle.queryPermission({ mode: 'read' })) !== 'granted'){
+      if ((await entry.handle.requestPermission({ mode: 'read' })) !== 'granted'){
+        showStatus('הגישה לקובץ נדחתה');
+        return;
+      }
+    }
+    const file = await entry.handle.getFile();
+    openFileObject(file, entry.handle);
+  } catch(e){
+    showStatus('לא ניתן לפתוח את הקובץ (אולי הוזז/נמחק) - נסי לבחור מחדש');
+  }
+}
+
+els.recentBtn.addEventListener('click', ev => {
+  ev.stopPropagation();
+  els.recentPopover.classList.toggle('open');
+});
+document.addEventListener('click', () => els.recentPopover.classList.remove('open'));
+els.recentPopover.addEventListener('click', ev => ev.stopPropagation());
+els.recentClear.addEventListener('click', async () => { await idbClear(); renderRecents(); });
+
+// ===== Theme =====
+function applyTheme(theme){
+  if (!theme || !theme.colorScheme) return;
+  const cs = theme.colorScheme, r = document.documentElement.style;
+  r.setProperty('--color-primary', cs.primary);
+  r.setProperty('--color-on-primary', cs.onPrimary);
+  r.setProperty('--color-secondary', cs.secondary);
+  r.setProperty('--color-on-secondary', cs.onSecondary);
+  r.setProperty('--color-surface', cs.surface);
+  r.setProperty('--color-on-surface', cs.onSurface);
+  r.setProperty('--color-surface-container-highest', cs.surfaceContainerHighest);
+  r.setProperty('--color-error', cs.error);
+  r.setProperty('--color-on-error', cs.onError);
+  r.setProperty('--color-outline', cs.outline);
+  r.setProperty('--color-primary-subtle', hexToRgba(cs.primary, 0.12));
+  r.setProperty('--color-secondary-subtle', hexToRgba(cs.secondary, 0.12));
+  if (theme.typography){
+    const t = theme.typography;
+    r.setProperty('--font-main', `'${t.fontFamily}', 'David', sans-serif`);
+    r.setProperty('--font-size-base', `${Math.max(12, Math.round(t.fontSize * 0.85))}px`);
+    r.setProperty('--line-height', String(t.lineHeight));
+  }
+}
+function hexToRgba(hex, a){
+  const n = hex.replace('#','');
+  const r = parseInt(n.slice(0,2),16), g = parseInt(n.slice(2,4),16), b = parseInt(n.slice(4,6),16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+// ===== Document state (mode: 'pdf' | 'image' | 'text') =====
+let mode = null, pdfDoc = null, currentImg = null, currentPage = 1, scale = 1.4, currentFileName = '';
+let renderTask = null;
+
+async function renderPage(num){
+  if (!pdfDoc) return;
+  if (renderTask) { try { renderTask.cancel(); } catch(e){} }
+  const page = await pdfDoc.getPage(num);
+  const viewport = page.getViewport({ scale });
+  els.canvas.width = viewport.width;
+  els.canvas.height = viewport.height;
+  els.canvas.style.display = 'block';
+  const ctx = els.canvas.getContext('2d');
+  renderTask = page.render({ canvasContext: ctx, viewport });
+  try { await renderTask.promise; } catch(e){ if (e && e.name !== 'RenderingCancelledException') throw e; }
+  els.pageInfo.textContent = `עמוד ${num} מתוך ${pdfDoc.numPages}`;
+  els.prev.disabled = num <= 1;
+  els.next.disabled = num >= pdfDoc.numPages;
+}
+
+function renderImage(){
+  if (!currentImg) return;
+  const w = currentImg.naturalWidth * scale, h = currentImg.naturalHeight * scale;
+  els.canvas.width = w;
+  els.canvas.height = h;
+  els.canvas.style.display = 'block';
+  const ctx = els.canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(currentImg, 0, 0, w, h);
+}
+
+function resetToolbarForMode(){
+  els.prev.disabled = mode !== 'pdf' || currentPage <= 1;
+  els.next.disabled = mode !== 'pdf' || (pdfDoc && currentPage >= pdfDoc.numPages);
+  els.zoomOut.disabled = mode === 'text' || mode === 'html' || !mode;
+  els.zoomIn.disabled = mode === 'text' || mode === 'html' || !mode;
+  els.embeddedText.disabled = mode !== 'pdf';
+  els.ocrBtn.disabled = !(mode === 'pdf' || mode === 'image');
+}
+
+function hideAllViewers(){
+  els.canvas.style.display = 'none';
+  els.htmlFrame.style.display = 'none';
+  els.htmlFrame.srcdoc = '';
+}
+
+async function loadPdf(arrayBuffer, name){
+  let doc;
+  try {
+    doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  } catch(err){
+    showStatus('שגיאה בפתיחת הקובץ: ' + (err && err.message ? err.message : 'קובץ לא תקין'));
+    return;
+  }
+  hideAllViewers();
+  mode = 'pdf'; pdfDoc = doc; currentImg = null;
+  currentFileName = name || 'קובץ.pdf';
+  els.currentName.textContent = currentFileName;
+  els.dropzone.style.display = 'none';
+  currentPage = 1;
+  clearTextPanel();
+  await renderPage(currentPage);
+  resetToolbarForMode();
+  showStatus('הקובץ נפתח בהצלחה');
+}
+
+async function loadImage(dataUrl, name){
+  const img = new Image();
+  try {
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('קובץ תמונה לא תקין'));
+      img.src = dataUrl;
+    });
+  } catch(err){
+    showStatus(err.message);
+    return;
+  }
+  hideAllViewers();
+  mode = 'image'; pdfDoc = null; currentImg = img;
+  currentFileName = name;
+  els.currentName.textContent = currentFileName;
+  els.dropzone.style.display = 'none';
+  els.pageInfo.textContent = 'תמונה';
+  clearTextPanel();
+  renderImage();
+  resetToolbarForMode();
+  showStatus('התמונה נפתחה בהצלחה');
+}
+
+async function loadText(text, name){
+  hideAllViewers();
+  mode = 'text'; pdfDoc = null; currentImg = null;
+  currentFileName = name;
+  els.currentName.textContent = currentFileName;
+  els.dropzone.style.display = 'none';
+  els.pageInfo.textContent = '-';
+  showTextPanel(currentFileName, text);
+  resetToolbarForMode();
+  showStatus('קובץ הטקסט נפתח בהצלחה');
+}
+
+async function loadHtml(html, name){
+  hideAllViewers();
+  mode = 'html'; pdfDoc = null; currentImg = null;
+  currentFileName = name;
+  els.currentName.textContent = currentFileName;
+  els.dropzone.style.display = 'none';
+  els.pageInfo.textContent = '-';
+  clearTextPanel();
+  els.htmlFrame.style.display = 'block';
+  els.htmlFrame.srcdoc = html;
+  resetToolbarForMode();
+  showStatus('הקובץ נפתח בהצלחה');
+}
+
+async function loadTiff(arrayBuffer, name){
+  let img;
+  try {
+    const ifds = UTIF.decode(arrayBuffer);
+    UTIF.decodeImage(arrayBuffer, ifds[0]);
+    const rgba = UTIF.toRGBA8(ifds[0]);
+    const w = ifds[0].width, h = ifds[0].height;
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    off.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba), w, h), 0, 0);
+    const dataUrl = off.toDataURL();
+    img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('קובץ TIFF לא תקין'));
+      img.src = dataUrl;
+    });
+    if (ifds.length > 1) showStatus('קובץ TIFF עם ' + ifds.length + ' עמודים - מוצג רק העמוד הראשון');
+  } catch(err){
+    showStatus('שגיאה בפתיחת קובץ TIFF: ' + (err && err.message ? err.message : String(err)));
+    return;
+  }
+  hideAllViewers();
+  mode = 'image'; pdfDoc = null; currentImg = img;
+  currentFileName = name;
+  els.currentName.textContent = currentFileName;
+  els.dropzone.style.display = 'none';
+  els.pageInfo.textContent = 'תמונה';
+  clearTextPanel();
+  renderImage();
+  resetToolbarForMode();
+  showStatus('הקובץ נפתח בהצלחה');
+}
+
+// ===== ZIP-based office formats (DOCX/PPTX/XLSX/EPUB) - text extraction only via JSZip =====
+function decodeXmlEntities(s){
+  return (s || '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+}
+
+async function extractDocxText(zip){
+  const entry = zip.file('word/document.xml');
+  if (!entry) throw new Error('word/document.xml לא נמצא בקובץ');
+  const xml = await entry.async('string');
+  const lines = xml.split(/<\/w:p>/).map(p => {
+    let text = '', m;
+    const re = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+    while ((m = re.exec(p))) text += m[1];
+    return decodeXmlEntities(text);
+  }).filter(l => l.length);
+  return lines.join('\n');
+}
+
+async function extractPptxText(zip){
+  const files = Object.keys(zip.files)
+    .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+    .sort((a, b) => parseInt(a.match(/slide(\d+)/)[1], 10) - parseInt(b.match(/slide(\d+)/)[1], 10));
+  const slides = [];
+  for (const name of files){
+    const xml = await zip.file(name).async('string');
+    let text = '', m;
+    const re = /<a:t[^>]*>([^<]*)<\/a:t>/g;
+    while ((m = re.exec(xml))) text += m[1] + ' ';
+    slides.push('--- שקופית ' + (slides.length + 1) + ' ---\n' + decodeXmlEntities(text).trim());
+  }
+  return slides.join('\n\n');
+}
+
+async function extractXlsxText(zip){
+  let shared = [];
+  const sharedEntry = zip.file('xl/sharedStrings.xml');
+  if (sharedEntry){
+    const xml = await sharedEntry.async('string');
+    let m;
+    const siRe = /<si>([\s\S]*?)<\/si>/g;
+    while ((m = siRe.exec(xml))){
+      let text = '', tm;
+      const tRe = /<t[^>]*>([^<]*)<\/t>/g;
+      while ((tm = tRe.exec(m[1]))) text += tm[1];
+      shared.push(decodeXmlEntities(text));
+    }
+  }
+  const sheetFiles = Object.keys(zip.files)
+    .filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort((a, b) => parseInt(a.match(/sheet(\d+)/)[1], 10) - parseInt(b.match(/sheet(\d+)/)[1], 10));
+  const sheets = [];
+  for (const name of sheetFiles){
+    const xml = await zip.file(name).async('string');
+    const rows = [];
+    let rm;
+    const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/g;
+    while ((rm = rowRe.exec(xml))){
+      const cells = [];
+      let cm;
+      const cellRe = /<c\b([^>]*)(?:\/>|>([\s\S]*?)<\/c>)/g;
+      while ((cm = cellRe.exec(rm[1]))){
+        const attrs = cm[1] || '', inner = cm[2] || '';
+        let val = '';
+        if (/\st="inlineStr"/.test(attrs)){
+          let tm;
+          const tRe = /<t[^>]*>([^<]*)<\/t>/g;
+          while ((tm = tRe.exec(inner))) val += tm[1];
+        } else {
+          const vm = /<v>([^<]*)<\/v>/.exec(inner);
+          if (vm) val = /\st="s"/.test(attrs) ? (shared[parseInt(vm[1], 10)] || '') : vm[1];
+        }
+        cells.push(decodeXmlEntities(val));
+      }
+      rows.push(cells.join('\t'));
+    }
+    sheets.push('--- גליון ' + (sheets.length + 1) + ' ---\n' + rows.join('\n'));
+  }
+  return sheets.join('\n\n');
+}
+
+async function extractEpubText(zip){
+  const containerXml = await zip.file('META-INF/container.xml').async('string');
+  const opfPathMatch = /full-path="([^"]+)"/.exec(containerXml);
+  if (!opfPathMatch) throw new Error('לא נמצא קובץ OPF ב-EPUB');
+  const opfPath = opfPathMatch[1];
+  const opfDir = opfPath.includes('/') ? opfPath.slice(0, opfPath.lastIndexOf('/') + 1) : '';
+  const opfXml = await zip.file(opfPath).async('string');
+  const manifest = {};
+  let mm;
+  const itemRe = /<item\b([^>]*)\/?>/g;
+  while ((mm = itemRe.exec(opfXml))){
+    const idM = /\sid="([^"]+)"/.exec(mm[1]);
+    const hrefM = /\shref="([^"]+)"/.exec(mm[1]);
+    if (idM && hrefM) manifest[idM[1]] = hrefM[1];
+  }
+  const spine = [];
+  let sm;
+  const spineRe = /<itemref\b([^>]*)\/?>/g;
+  while ((sm = spineRe.exec(opfXml))){
+    const idrefM = /\sidref="([^"]+)"/.exec(sm[1]);
+    if (idrefM && manifest[idrefM[1]]) spine.push(opfDir + manifest[idrefM[1]]);
+  }
+  const chapters = [];
+  for (const path of spine){
+    const entry = zip.file(path);
+    if (!entry) continue;
+    const html = await entry.async('string');
+    const stripped = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ');
+    const text = decodeXmlEntities(stripped.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')).trim();
+    if (text) chapters.push(text);
+  }
+  return chapters.join('\n\n---\n\n');
+}
+
+async function extractZipText(file, kind){
+  const buf = await file.arrayBuffer();
+  const zip = await JSZip.loadAsync(buf);
+  if (kind === 'docx') return extractDocxText(zip);
+  if (kind === 'pptx') return extractPptxText(zip);
+  if (kind === 'xlsx') return extractXlsxText(zip);
+  return extractEpubText(zip);
+}
+
+function getFileKind(file){
+  const lower = (file.name || '').toLowerCase();
+  const type = file.type || '';
+  if (lower.endsWith('.pdf') || type === 'application/pdf') return 'pdf';
+  if (lower.endsWith('.docx')) return 'docx';
+  if (lower.endsWith('.pptx')) return 'pptx';
+  if (lower.endsWith('.xlsx')) return 'xlsx';
+  if (lower.endsWith('.epub')) return 'epub';
+  if (/\.tiff?$/.test(lower) || type === 'image/tiff') return 'tiff';
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(lower) || type.startsWith('image/')) return 'image';
+  if (/\.(html?)$/.test(lower) || type === 'text/html') return 'html';
+  if (/\.(txt|md|csv|json|log|xml|ini)$/.test(lower) || type.startsWith('text/')) return 'text';
+  return null;
+}
+
+function openFileObject(file, handle){
+  if (!file) return;
+  const kind = getFileKind(file);
+  if (!kind){
+    showStatus('סוג קובץ לא נתמך - ניתן לפתוח PDF, תמונה או קובץ טקסט');
+    return;
+  }
+  if (kind === 'docx' || kind === 'pptx' || kind === 'xlsx' || kind === 'epub'){
+    showStatus('מחלץ טקסט מהקובץ...');
+    extractZipText(file, kind)
+      .then(text => { loadText(text || '(לא נמצא טקסט בקובץ)', file.name); addRecent(file.name, file.size, handle || null); })
+      .catch(err => showStatus('שגיאה בפתיחת הקובץ: ' + (err && err.message ? err.message : String(err))));
+    return;
+  }
+  if (kind === 'tiff'){
+    file.arrayBuffer()
+      .then(buf => { loadTiff(buf, file.name); addRecent(file.name, file.size, handle || null); })
+      .catch(() => showStatus('שגיאה בקריאת הקובץ'));
+    return;
+  }
+  const reader = new FileReader();
+  reader.onerror = () => showStatus('שגיאה בקריאת הקובץ');
+  if (kind === 'pdf'){
+    reader.onload = async () => { await loadPdf(reader.result, file.name); addRecent(file.name, file.size, handle || null); };
+    reader.readAsArrayBuffer(file);
+  } else if (kind === 'image'){
+    reader.onload = async () => { await loadImage(reader.result, file.name); addRecent(file.name, file.size, handle || null); };
+    reader.readAsDataURL(file);
+  } else if (kind === 'html'){
+    reader.onload = async () => { await loadHtml(reader.result, file.name); addRecent(file.name, file.size, handle || null); };
+    reader.readAsText(file);
+  } else {
+    reader.onload = async () => { await loadText(reader.result, file.name); addRecent(file.name, file.size, handle || null); };
+    reader.readAsText(file);
+  }
+}
+
+const supportsFilePicker = typeof window.showOpenFilePicker === 'function';
+
+async function openFileDialog(){
+  if (supportsFilePicker){
+    try {
+      const [handle] = await window.showOpenFilePicker();
+      const file = await handle.getFile();
+      openFileObject(file, handle);
+    } catch(e){
+      // user cancelled the picker - nothing to do
+    }
+    return;
+  }
+  els.fileInput.value = '';
+  els.fileInput.click();
+}
+
+els.open.addEventListener('click', openFileDialog);
+els.fileInput.addEventListener('change', e => { if (e.target.files[0]) openFileObject(e.target.files[0]); });
+els.dropzone.addEventListener('click', openFileDialog);
+['dragenter','dragover'].forEach(evt => els.viewerArea.addEventListener(evt, e => {
+  e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add('dragover'); els.dropzone.style.display = 'flex';
+}));
+['dragleave'].forEach(evt => els.viewerArea.addEventListener(evt, e => {
+  e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove('dragover');
+  if (mode) els.dropzone.style.display = 'none';
+}));
+els.viewerArea.addEventListener('drop', e => {
+  e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove('dragover');
+  const dt = e.dataTransfer;
+  if (dt && dt.files && dt.files[0]) openFileObject(dt.files[0]);
+  else if (mode) els.dropzone.style.display = 'none';
+});
+
+function rerender(){ if (mode === 'pdf') renderPage(currentPage); else if (mode === 'image') renderImage(); }
+els.prev.addEventListener('click', () => { if (mode === 'pdf' && currentPage > 1) { currentPage--; renderPage(currentPage); clearTextPanel(); } });
+els.next.addEventListener('click', () => { if (mode === 'pdf' && pdfDoc && currentPage < pdfDoc.numPages) { currentPage++; renderPage(currentPage); clearTextPanel(); } });
+els.zoomIn.addEventListener('click', () => { scale = Math.min(scale + 0.2, 4); rerender(); storageSet('scale', scale); });
+els.zoomOut.addEventListener('click', () => { scale = Math.max(scale - 0.2, 0.4); rerender(); storageSet('scale', scale); });
+
+// ===== Text panel =====
+function clearTextPanel(){
+  els.textOutput.textContent = '';
+  els.textOutput.style.display = 'none';
+  els.textEmpty.style.display = 'block';
+}
+function showTextPanel(title, text){
+  els.textPanelTitle.textContent = title;
+  els.textOutput.textContent = text;
+  els.textOutput.style.display = text ? 'block' : 'none';
+  els.textEmpty.style.display = text ? 'none' : 'block';
+  els.textpanel.classList.add('open');
+}
+els.closePanel.addEventListener('click', () => els.textpanel.classList.remove('open'));
+els.copyText.addEventListener('click', async () => {
+  const text = els.textOutput.textContent;
+  if (!text) { showStatus('אין טקסט להעתקה'); return; }
+  try { await navigator.clipboard.writeText(text); showStatus('הטקסט הועתק'); }
+  catch(e){ showStatus('שגיאה בהעתקה'); }
+});
+
+// ===== Embedded text extraction =====
+els.embeddedText.addEventListener('click', async () => {
+  if (mode !== 'pdf' || !pdfDoc) return;
+  showStatus('קורא טקסט מוטבע...');
+  const page = await pdfDoc.getPage(currentPage);
+  const content = await page.getTextContent();
+  const text = content.items.map(it => it.str).join(' ').trim();
+  if (!text) {
+    showTextPanel('טקסט מוטבע - עמוד ' + currentPage, '');
+    showStatus('לא נמצא טקסט מוטבע בעמוד זה (כנראה עמוד סרוק) - נסי OCR');
+  } else {
+    showTextPanel('טקסט מוטבע - עמוד ' + currentPage, text);
+    showStatus('טקסט מוטבע נטען');
+  }
+});
+
+// ===== OCR =====
+let tesseractWorker = null;
+async function getTesseractWorker(){
+  if (tesseractWorker) return tesseractWorker;
+  tesseractWorker = await Tesseract.createWorker('heb', 1, {
+    workerPath: './vendor/tesseract-worker.min.js',
+    corePath: './vendor/tesseract-core-simd-lstm.wasm.js',
+    langPath: './vendor/lang-data/',
+    gzip: false,
+    logger: m => {
+      if (m.status === 'recognizing text' && typeof m.progress === 'number'){
+        els.ocrProgress.style.display = 'block';
+        els.ocrProgress.textContent = 'מזהה טקסט... ' + Math.round(m.progress * 100) + '%';
+      }
+    }
+  });
+  return tesseractWorker;
+}
+
+els.ocrBtn.addEventListener('click', async () => {
+  if (mode !== 'pdf' && mode !== 'image') return;
+  els.ocrBtn.disabled = true;
+  els.ocrProgress.style.display = 'block';
+  els.ocrProgress.textContent = 'טוען מנוע OCR...';
+  const label = mode === 'pdf' ? ('עמוד ' + currentPage) : currentFileName;
+  try {
+    const worker = await getTesseractWorker();
+    els.ocrProgress.textContent = 'מזהה טקסט...';
+    const { data } = await worker.recognize(els.canvas);
+    showTextPanel('טקסט מזוהה (OCR) - ' + label, data.text.trim());
+    showStatus('זיהוי הטקסט הושלם');
+  } catch(err){
+    const msg = (err && err.message) || String(err);
+    if (/heb\.traineddata|fetch|404|network/i.test(msg)) {
+      showTextPanel('שגיאת OCR', 'לא נמצא קובץ שפה עברית (heb.traineddata) בתיקיית vendor/lang-data של התוסף.\nיש להוסיף אותו כדי להפעיל OCR - ראה הוראות ההתקנה של התוסף.');
+    } else {
+      showTextPanel('שגיאת OCR', 'אירעה שגיאה בהפעלת ה-OCR: ' + msg);
+    }
+    showStatus('שגיאה בהפעלת OCR');
+  } finally {
+    els.ocrBtn.disabled = false;
+    els.ocrProgress.style.display = 'none';
+  }
+});
+
+// ===== About / diagnostics =====
+els.aboutToggle.addEventListener('click', () => els.aboutPanel.classList.toggle('open'));
+
+async function runDiagnostics(){
+  els.diagBox.textContent = 'בודק...';
+  const lines = [];
+  lines.push('Otzaria API זמין: ' + (window.Otzaria && typeof Otzaria.call === 'function' ? 'כן' : 'לא'));
+  try {
+    const r = await fetch('./vendor/lang-data/heb.traineddata');
+    lines.push('קובץ שפה עברית (heb.traineddata): ' + (r.ok ? 'קיים ✅' : 'חסר ❌ (סטטוס ' + r.status + ')'));
+  } catch(e){
+    lines.push('קובץ שפה עברית (heb.traineddata): חסר ❌');
+  }
+  try {
+    const r2 = await fetch('./vendor/tesseract-core-simd-lstm.wasm');
+    lines.push('קובץ מנוע OCR (wasm): ' + (r2.ok ? 'קיים ✅' : 'חסר ❌ (סטטוס ' + r2.status + ')'));
+  } catch(e){
+    lines.push('קובץ מנוע OCR (wasm): חסר ❌');
+  }
+  lines.push('קובץ נוכחי: ' + (currentFileName || 'אין'));
+  els.diagBox.textContent = lines.join('\n');
+}
+els.diagRefresh.addEventListener('click', runDiagnostics);
+
+// ===== Feedback (לחצן להארות) =====
+els.lightbulb.addEventListener('click', async () => {
+  const msg = window.prompt('מה תרצי לשתף לגבי התוסף? (הודעה תישלח למפתח)');
+  if (!msg || !msg.trim()) return;
+  try {
+    await Otzaria.call('feedback.sendEmail', {
+      to: 'e0548433917@gmail.com',
+      subject: 'משוב על תוסף צופה PDF עם OCR',
+      body: msg.trim(),
+      includeSystemInfo: true
+    });
+    showStatus('המשוב נשלח, תודה!');
+  } catch(e){
+    showStatus('שגיאה בשליחת המשוב');
+  }
+});
+
+// ===== Boot =====
+async function boot(){
+  const savedScale = await storageGet('scale');
+  if (typeof savedScale === 'number' && savedScale > 0) scale = savedScale;
+  runDiagnostics();
+}
+
+renderRecents();
+
+function waitForOtzaria(elapsed){
+  if (window.Otzaria && typeof Otzaria.on === 'function'){
+    Otzaria.on('plugin.boot', payload => { applyTheme(payload && payload.theme); boot(); });
+    Otzaria.on('theme.changed', applyTheme);
+    boot();
+    return;
+  }
+  if (elapsed > 4000 && !waitForOtzaria._warned){
+    waitForOtzaria._warned = true;
+    showStatus('ממתינה לטעינת אוצריא...');
+  }
+  setTimeout(() => waitForOtzaria(elapsed + 200), 200);
+}
+waitForOtzaria(0);
+
+})();
+</script>
+</body>
+</html>

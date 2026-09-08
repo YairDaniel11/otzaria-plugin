@@ -1,0 +1,30 @@
+[
+  {
+    "heRef_2": "פרק א",
+    "line_index_1": 1,
+    "path_2": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\sample.pdf",
+    "line_index_2": 1,
+    "Conection Type": "הפניה"
+  },
+  {
+    "heRef_2": "פרק ב",
+    "line_index_1": 2,
+    "path_2": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\sample.pdf",
+    "line_index_2": 3,
+    "Conection Type": "הפניה"
+  },
+  {
+    "heRef_2": "פרק ב - תת סעיף מקונן",
+    "line_index_1": 3,
+    "path_2": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\sample.pdf",
+    "line_index_2": 4,
+    "Conection Type": "הפניה"
+  },
+  {
+    "heRef_2": "פרק ג - תת סעיף",
+    "line_index_1": 4,
+    "path_2": "C:\\Users\\HP\\Desktop\\מאגרי גיטאב\\תוספי אוצריא\\src-תוספים\\otzaria-personal-library-indexer\\fixtures\\sample.pdf",
+    "line_index_2": 5,
+    "Conection Type": "הפניה"
+  }
+]
