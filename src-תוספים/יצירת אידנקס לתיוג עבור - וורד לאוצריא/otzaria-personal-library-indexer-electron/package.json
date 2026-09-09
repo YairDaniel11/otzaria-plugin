@@ -20,7 +20,7 @@
   "devDependencies": {
     "@types/node": "^20.14.10",
     "electron": "^31.3.0",
-    "electron-builder": "^26.15.3",
+    "electron-builder": "^24.13.3",
     "pdf-lib": "^1.17.1",
     "typescript": "^5.5.3"
   },
@@ -39,7 +39,9 @@
     },
     "win": {
       "icon": "build-assets/icon.ico",
-      "target": ["portable"]
+      "target": [
+        "portable"
+      ]
     },
     "portable": {
       "artifactName": "סורק-ספרייה-אישית-לאוצריא.exe"
