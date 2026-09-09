@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>סורק ספרייה אישית - אוצריא</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --border: #ddd6cc;
+    --text: #2b2620;
+    --muted: #766f63;
+    --accent: #7a5c3e;
+    --accent-hover: #5f4630;
+    --ok: #2f7d4f;
+    --warn: #a3671c;
+    --err: #b3402f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    direction: rtl;
+  }
+  header {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+  header h1 { margin: 0 0 4px; font-size: 22px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  main {
+    max-width: 900px;
+    margin: 24px auto;
+    padding: 0 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  input[type=text] {
+    flex: 1;
+    min-width: 240px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+  }
+  button {
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: var(--accent-hover); }
+  button.secondary {
+    background: transparent;
+    color: var(--accent);
+  }
+  button.secondary:hover { background: #efe8dc; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  #log {
+    background: #1e1c19;
+    color: #e8e2d6;
+    border-radius: 8px;
+    padding: 14px;
+    height: 260px;
+    overflow-y: auto;
+    font-family: "Consolas", monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+  .log-line.err { color: #ff8a75; }
+  .log-line.file { color: #9fd0ff; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: right;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--muted); font-weight: 600; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: #eee6d8;
+    color: var(--accent);
+  }
+  .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    min-width: 120px;
+    text-align: center;
+  }
+  .stat b { display: block; font-size: 22px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  details summary { cursor: pointer; color: var(--muted); margin-top: 10px; }
+  pre#rawJson {
+    max-height: 300px;
+    overflow: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 12px;
+  }
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,16,10,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+  }
+  #modal {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 26px;
+    max-width: 460px;
+    width: 90%;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  #modal h2 { margin-top: 0; font-size: 17px; }
+  #modal .choices { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  #modal .choices button { width: 100%; }
+  [hidden] { display: none !important; }
+  .muted { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>סורק ספרייה אישית לאוצריא</h1>
+  <p>סריקת תיקיית Word/PDF, הוספת סימניות לכותרות חסרות, ובניית מסמכי-מלווה ל-PDF עם תוכן עניינים.</p>
+</header>
+
+<main>
+  <section class="panel" id="setupPanel">
+    <div class="row">
+      <input type="text" id="folderInput" placeholder="נתיב תיקייה לסריקה, למשל C:\\ספרים שלי" />
+      <button class="secondary" id="pickFolderBtn">בחר תיקייה...</button>
+    </div>
+    <p class="muted" id="folderStatus"></p>
+    <div class="row" style="margin-top:12px;">
+      <label for="subfolderInput" class="muted" style="white-space:nowrap;">תיקיית פלט (בשורש התיקייה שנבחרה):</label>
+      <input type="text" id="subfolderInput" value="_אינדקס_אישי" style="max-width:220px;" />
+    </div>
+    <p class="muted">כל הקבצים שהכלי יוצר (מסמכים-מלווים ל-PDF, קובצי הקישורים שלהם, וקובץ המיפוי personal-library-index.json) יישמרו בתיקייה זו בשורש התיקייה שנבחרה, ולא ליד קבצי המקור עצמם.</p>
+    <div class="row" style="margin-top:12px;">
+      <button id="startScanBtn">התחל סריקה</button>
+    </div>
+  </section>
+
+  <section class="panel" id="progressPanel" hidden>
+    <div class="row" style="justify-content:space-between;">
+      <h2 style="margin:0;font-size:16px;">התקדמות הסריקה</h2>
+      <span class="muted" id="progressState">רץ...</span>
+    </div>
+    <div id="log" style="margin-top:12px;"></div>
+  </section>
+
+  <section class="panel" id="resultPanel" hidden>
+    <h2 style="margin-top:0;font-size:16px;">סיכום הסריקה</h2>
+    <div class="stat-row" id="statRow"></div>
+    <h3 style="font-size:14px;">ספרים שעודכנו/נוספו</h3>
+    <table id="booksTable">
+      <thead><tr><th>כותרת</th><th>סוג</th><th>כותרות</th><th>נתיב</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h3 style="font-size:14px;">קבצים שדולגו / לא נתמכו</h3>
+    <table id="skippedTable">
+      <thead><tr><th>נתיב</th><th>סיבה</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="margin-top:16px;">
+      <button id="openIndexFolderBtn">פתח את תיקיית קובץ המיפוי</button>
+      <button class="secondary" id="newScanBtn">סריקה חדשה</button>
+    </div>
+    <details>
+      <summary>הצג JSON גולמי של קובץ המיפוי</summary>
+      <pre id="rawJson"></pre>
+    </details>
+  </section>
+</main>
+
+<div id="overlay" hidden>
+  <div id="modal">
+    <h2 id="modalTitle"></h2>
+    <p class="muted" id="modalBody"></p>
+    <div class="choices">
+      <button data-choice="source">הוסף למקור</button>
+      <button data-choice="copy">העתק לקובץ חדש</button>
+      <button class="secondary" data-choice="skip">דלג</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const folderInput = document.getElementById('folderInput');
+  const subfolderInput = document.getElementById('subfolderInput');
+  const pickFolderBtn = document.getElementById('pickFolderBtn');
+  const folderStatus = document.getElementById('folderStatus');
+  const startScanBtn = document.getElementById('startScanBtn');
+  const progressPanel = document.getElementById('progressPanel');
+  const progressState = document.getElementById('progressState');
+  const logEl = document.getElementById('log');
+  const resultPanel = document.getElementById('resultPanel');
+  const statRow = document.getElementById('statRow');
+  const booksTableBody = document.querySelector('#booksTable tbody');
+  const skippedTableBody = document.querySelector('#skippedTable tbody');
+  const rawJson = document.getElementById('rawJson');
+  const openIndexFolderBtn = document.getElementById('openIndexFolderBtn');
+  const newScanBtn = document.getElementById('newScanBtn');
+  const overlay = document.getElementById('overlay');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+
+  let currentScanId = null;
+  let currentIndexPath = null;
+  let es = null;
+
+  function addLog(text, cls) {
+    const line = document.createElement('div');
+    line.className = 'log-line' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  pickFolderBtn.addEventListener('click', async () => {
+    pickFolderBtn.disabled = true;
+    folderStatus.textContent = 'פותח חלון בחירת תיקייה...';
+    try {
+      const res = await fetch('/api/pick-folder', { method: 'POST' });
+      const data = await res.json();
+      if (data.folder) {
+        folderInput.value = data.folder;
+        folderStatus.textContent = 'נבחרה תיקייה: ' + data.folder;
+      } else {
+        folderStatus.textContent = 'לא נבחרה תיקייה (בוטל).';
+      }
+    } catch (err) {
+      folderStatus.textContent = 'שגיאה בפתיחת דיאלוג בחירת תיקייה: ' + err.message;
+    } finally {
+      pickFolderBtn.disabled = false;
+    }
+  });
+
+  function resetForNewScan() {
+    resultPanel.hidden = true;
+    progressPanel.hidden = true;
+    logEl.innerHTML = '';
+    if (es) { es.close(); es = null; }
+    currentScanId = null;
+    currentIndexPath = null;
+  }
+
+  newScanBtn.addEventListener('click', resetForNewScan);
+
+  startScanBtn.addEventListener('click', async () => {
+    const folder = folderInput.value.trim();
+    if (!folder) {
+      folderStatus.textContent = 'נא לבחור או להקליד נתיב תיקייה.';
+      return;
+    }
+    resetForNewScan();
+    progressPanel.hidden = false;
+    progressState.textContent = 'מתחיל...';
+    startScanBtn.disabled = true;
+
+    try {
+      const companionSubfolder = subfolderInput.value.trim() || '_אינדקס_אישי';
+      const res = await fetch('/api/scan/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder, companionSubfolder }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        addLog('שגיאה: ' + data.error, 'err');
+        progressState.textContent = 'שגיאה';
+        startScanBtn.disabled = false;
+        return;
+      }
+      currentScanId = data.scanId;
+      connectStream(currentScanId);
+    } catch (err) {
+      addLog('שגיאה: ' + err.message, 'err');
+      startScanBtn.disabled = false;
+    }
+  });
+
+  function connectStream(scanId) {
+    es = new EventSource('/api/scan/stream?id=' + encodeURIComponent(scanId));
+
+    es.addEventListener('log', (e) => {
+      const d = JSON.parse(e.data);
+      addLog(d.message);
+    });
+    es.addEventListener('files-found', (e) => {
+      const d = JSON.parse(e.data);
+      progressState.textContent = 'נמצאו ' + d.count + ' קבצים...';
+    });
+    es.addEventListener('file-start', (e) => {
+      const d = JSON.parse(e.data);
+      addLog('מעבד: ' + d.path, 'file');
+      progressState.textContent = 'מעבד: ' + d.path.split(/[\\\\/]/).pop();
+    });
+    es.addEventListener('file-done', (e) => {
+      const d = JSON.parse(e.data);
+      addLog('הושלם (' + d.headingCount + ' כותרות): ' + d.path);
+    });
+    es.addEventListener('file-skipped', (e) => {
+      const d = JSON.parse(e.data);
+      addLog('דילוג: ' + d.path + ' — ' + d.reason, 'err');
+    });
+    es.addEventListener('file-error', (e) => {
+      const d = JSON.parse(e.data);
+      addLog('שגיאה: ' + d.path + ' — ' + d.message, 'err');
+    });
+    es.addEventListener('question', (e) => {
+      const d = JSON.parse(e.data);
+      askQuestion(scanId, d);
+    });
+    es.addEventListener('fatal-error', (e) => {
+      const d = JSON.parse(e.data);
+      addLog('שגיאה כללית: ' + d.message, 'err');
+      progressState.textContent = 'שגיאה';
+      startScanBtn.disabled = false;
+    });
+    es.addEventListener('done', (e) => {
+      const summary = JSON.parse(e.data);
+      progressState.textContent = 'הסתיים';
+      startScanBtn.disabled = false;
+      showResult(summary);
+      es.close();
+    });
+    es.onerror = () => {
+      // חיבור ה-SSE עצמו נופל רק אם השרת נפל; אין צורך להציג שגיאה על ניתוקים חולפים
+    };
+  }
+
+  function askQuestion(scanId, q) {
+    modalTitle.textContent = 'קובץ ' + q.fileLabel;
+    modalBody.textContent = 'נמצאו ' + q.missingCount + ' כותרות בלי סימנייה. מה לעשות?';
+    overlay.hidden = false;
+
+    function onClick(ev) {
+      const btn = ev.target.closest('button[data-choice]');
+      if (!btn) return;
+      const choice = btn.getAttribute('data-choice');
+      overlay.hidden = true;
+      overlay.querySelector('.choices').removeEventListener('click', onClick);
+      fetch('/api/scan/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scanId, questionId: q.id, choice }),
+      }).catch((err) => addLog('שגיאה בשליחת תשובה: ' + err.message, 'err'));
+    }
+    overlay.querySelector('.choices').addEventListener('click', onClick);
+  }
+
+  function kindLabel(kind) {
+    return kind === 'word' ? 'Word' : 'PDF (מסמך מלווה)';
+  }
+
+  function showResult(summary) {
+    resultPanel.hidden = false;
+    currentIndexPath = summary.indexPath;
+
+    statRow.innerHTML = '';
+    const stats = [
+      ['קבצים שנסקרו', summary.totalFilesFound],
+      ['ספרים שעודכנו', summary.updatedBooks.length],
+      ['דולגו', summary.skipped.length],
+      ['סה"כ באינדקס', summary.totalBooksInIndex],
+    ];
+    for (const [label, value] of stats) {
+      const div = document.createElement('div');
+      div.className = 'stat';
+      div.innerHTML = '<b>' + value + '</b><span>' + label + '</span>';
+      statRow.appendChild(div);
+    }
+
+    booksTableBody.innerHTML = '';
+    for (const b of summary.updatedBooks) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + escapeHtml(b.title) + '</td>' +
+        '<td><span class="badge">' + kindLabel(b.kind) + '</span></td>' +
+        '<td>' + b.headingCount + '</td>' +
+        '<td class="muted" style="font-size:12px;">' + escapeHtml(b.sourcePath) + '</td>';
+      booksTableBody.appendChild(tr);
+    }
+    if (summary.updatedBooks.length === 0) {
+      booksTableBody.innerHTML = '<tr><td colspan="4" class="muted">אין ספרים חדשים/מעודכנים בהרצה זו.</td></tr>';
+    }
+
+    skippedTableBody.innerHTML = '';
+    for (const s of summary.skipped) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td style="font-size:12px;">' + escapeHtml(s.path) + '</td>' +
+        '<td>' + escapeHtml(s.reason) + '</td>';
+      skippedTableBody.appendChild(tr);
+    }
+    if (summary.skipped.length === 0) {
+      skippedTableBody.innerHTML = '<tr><td colspan="2" class="muted">לא דולג אף קובץ.</td></tr>';
+    }
+
+    rawJson.textContent = JSON.stringify(summary.index, null, 2);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  openIndexFolderBtn.addEventListener('click', async () => {
+    if (!currentIndexPath) return;
+    try {
+      await fetch('/api/open-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: currentIndexPath }),
+      });
+    } catch (err) {
+      alert('שגיאה בפתיחת התיקייה: ' + err.message);
+    }
+  });
+})();
+</script>
+</body>
+</html>

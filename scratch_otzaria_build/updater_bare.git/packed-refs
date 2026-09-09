@@ -1,0 +1,4 @@
+# pack-refs with: peeled fully-peeled sorted 
+cbf916564048a9a18f7b25dda5cb90790e367aec refs/heads/content-hash-guard
+1c1e5bd24e00dd1a77e05741a1eb363543967f9e refs/heads/main
+9d6d7600809faca5e911d4db2c69041930ef4c00 refs/heads/sefaria-dependence-linktypes
