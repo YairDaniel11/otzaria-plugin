@@ -16,7 +16,7 @@ import os, io, json, re, sys, zipfile
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 SRC  = os.path.join(BASE, "src-תוספים")
-OUT  = os.path.join(BASE, "תוספים_מהחנות", "יאיר_דניאל")
+OUT  = os.path.join(BASE, "תוספים", "יאיר_דניאל")
 BETA = os.path.join(BASE, "בטא-אנגלית")
 
 # תיקיית היעד ושם התצוגה של כל תוסף בחנות
