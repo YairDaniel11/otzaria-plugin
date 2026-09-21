@@ -1,3 +1,7 @@
+// v3.2.3 — תיקון הודעת שגיאה מטעה כשבחירת תיקייה נדחית (למשל תיקייה בתוך
+// תיקיית אוצריא/מערכת): הוצגה בטעות הודעת "רשימת ההיתר לרשת" כי
+// describeFetchError וקוד הדחייה של ui.pickFolder חולקים אותו קידומת
+// error.forbidden. ראו describeFolderError.
 // v3.2.2 — נוספה הרשאת fs.folder_access (חסרה מה-manifest; בלעדיה
 // ui.pickFolder נכשל בשקט עם permission_denied וכפתורי ההורדה לא עשו דבר)
 // v3.2.1 — network.fetch הוחלף ב-network.fetchStream (הוסר באוצריא 0.9.98)
@@ -104,6 +108,28 @@ function describeFetchError(raw) {
     }
     if (text) return text.replace(/^Exception:\s*/, '').slice(0, 300);
     return 'לא התקבל פירוט מאוצריא. נסה שוב, ואם זה חוזר — בדוק חיבור לאינטרנט.';
+}
+
+/// ממפה שגיאה מ-`ui.pickFolder` להודעה בעברית.
+///
+/// **לא** משתמשת ב-[describeFetchError]: שתי הפעולות מקודדות שגיאת דחייה
+/// באותו קוד (`error.forbidden`) מסיבות שונות לגמרי — כתובת רשת לא מאושרת
+/// מול תיקייה מוגנת (מערכת/אוצריא/תיקיית הבית/רשת) — ו-describeFetchError
+/// הייתה מציגה בטעות את הודעת "רשימת ההיתר לרשת" גם כשהבעיה היא שהתיקייה
+/// שנבחרה נמצאת בתוך תיקיית אוצריא. ה-message שאוצריא מחזירה כאן היא כבר
+/// טקסט עברי קריא (למשל "תיקיות המערכת ותיקיות אוצריא אינן מותרות
+/// לתוספים") — מציגים אותו כמות שהוא, בלי לנחש קטגוריה.
+function describeFolderError(raw) {
+    const text = errorText(raw);
+    if (text.includes('error.permission_denied')) {
+        return 'לתוסף אין הרשאת גישה לתיקיות. ניתן להפעיל בהגדרות → ניהול תוספים.';
+    }
+    if (text.includes('error.forbidden')) {
+        const reason = text.replace(/^error\.forbidden:\s*/, '').trim();
+        return (reason || 'התיקייה שנבחרה אינה מותרת לתוספים') +
+               ' — בחר תיקייה אחרת (למשל תת-תיקייה חדשה תחת המסמכים שלך, לא בתוך תיקיית אוצריא עצמה).';
+    }
+    return describeFetchError(raw);
 }
 
 function parseBooksDataText(text) {
@@ -840,7 +866,7 @@ async function resolveDestFolder(title, { force = false } = {}) {
     // כשל עם קוד שגיאה (למשל permission_denied) מוצג למשתמש — אחרת הכפתור
     // "לא עושה כלום" בלי שום רמז למה. ביטול משתמש (אין error) נשאר שקט.
     if (folderRes?.error) {
-        showError(describeFetchError(folderRes.error));
+        showError(describeFolderError(folderRes.error));
         return null;
     }
     if (!folderRes?.success || !folderRes?.data?.path) return null;
