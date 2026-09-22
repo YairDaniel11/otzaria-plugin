@@ -1,3 +1,7 @@
+// v3.2.4 — שינוי שם/מיקום של תיקייה במאגר (PATH_RENAMES) מוזז עכשיו גם
+// בפועל בדיסק של המשתמש, לא רק בסטטוס ("מעודכן"/"חדש"): ראו
+// migrateRenamedFoldersOnDisk. דורש fs.moveEntry (אוצריא 0.9.98+, לא עדיין
+// בגרסה יציבה) — כשל שקט אצל משתמשים ישנים יותר, אין נסיגה בפונקציונליות.
 // v3.2.3 — תיקון הודעת שגיאה מטעה כשבחירת תיקייה נדחית (למשל תיקייה בתוך
 // תיקיית אוצריא/מערכת): הוצגה בטעות הודעת "רשימת ההיתר לרשת" כי
 // describeFetchError וקוד הדחייה של ui.pickFolder חולקים אותו קידומת
@@ -328,10 +332,42 @@ function toggleNode(path) {
 
 // שינויי שם של תיקיות במאגר: סטטוס ההורדה נשמר לפי path, ולכן שינוי שם
 // מנתק את הסטטוס והאוסף מוצג כ"חדש" גם למי שכבר הורידו. המפתח הישן מועבר
-// לחדש בטעינה. מפתח ישן -> מפתח חדש; חלים גם על תתי-נתיבים.
+// לחדש בטעינה (ראו migrateHashPaths), והתיקייה עצמה מוזזת בדיסק בפועל
+// (ראו migrateRenamedFoldersOnDisk). מפתח ישן -> מפתח חדש; חלים גם על
+// תתי-נתיבים.
 const PATH_RENAMES = {
     "שו''ת": 'שו״ת',
 };
+
+// דגל: בוצע כבר ניסיון הזזה בדיסק בהרצה הנוכחית של התוסף (לא לפני שיש
+// destFolder מאושר — ראו migrateRenamedFoldersOnDisk).
+let diskRenamesMigrated = false;
+
+/// מזיזה בפועל בדיסק כל תיקייה שברשימת [PATH_RENAMES], בתוך destFolder —
+/// כדי שהמשתמש לא ייתקע עם שתי עותקים (הישן שנשאר, החדש שיירד בנפרד) אחרי
+/// שינוי שם/מיקום במאגר המרוחק. דורשת fs.moveEntry (אוצריא 0.9.98+).
+///
+/// לא בודקת מראש אם המקור/היעד קיימים — אין API לכך בתוך תיקיית
+/// ui.pickFolder (רק fs.extractZip/fs.deleteFile/fs.moveEntry/fs.deleteFolder).
+/// במקום זה, פשוט קוראת ל-fs.moveEntry ומפרשת את השגיאה: error.not_found
+/// (המקור לא קיים — כבר הוזז, או שהמשתמש מעולם לא הוריד את זה) ו-
+/// error.invalid_params (היעד כבר קיים) הן שתיהן מצב יציב תקין, לא כשל
+/// אמיתי. error.unknown_method — אוצריא ישנה מ-0.9.98: אין ברירה אלא
+/// להשאיר את התיקייה הישנה במקומה עד שהמשתמש יעדכן.
+async function migrateRenamedFoldersOnDisk(destFolder) {
+    if (diskRenamesMigrated || typeof Otzaria === 'undefined') return;
+    diskRenamesMigrated = true;
+    for (const [from, to] of Object.entries(PATH_RENAMES)) {
+        try {
+            await Otzaria.call('fs.moveEntry', {
+                from: destFolder + '/' + from,
+                to: destFolder + '/' + to,
+            });
+        } catch {
+            // ראו תיעוד הפונקציה — כל כשל כאן שקט ולא-קריטי.
+        }
+    }
+}
 
 /// מחיל את [PATH_RENAMES] על מפת ה-hashes. מחזיר את המפה ודגל אם השתנתה.
 function migrateHashPaths(hashes) {
@@ -848,7 +884,10 @@ async function persistDestFolder(path) {
 ///
 /// [force] — לפתוח את בורר התיקיות גם כשכבר נבחרה תיקייה (כפתור "שנה").
 async function resolveDestFolder(title, { force = false } = {}) {
-    if (destFolderMemo && !force) return destFolderMemo;
+    if (destFolderMemo && !force) {
+        await migrateRenamedFoldersOnDisk(destFolderMemo);
+        return destFolderMemo;
+    }
 
     // הצגת התיקייה הקודמת בכותרת הדיאלוג — אין API להעביר תיקייה התחלתית
     // לבורר, ולכן זו הדרך היחידה לכוון את המשתמש חזרה לאותו מקום.
@@ -872,6 +911,7 @@ async function resolveDestFolder(title, { force = false } = {}) {
     if (!folderRes?.success || !folderRes?.data?.path) return null;
 
     await persistDestFolder(folderRes.data.path);
+    await migrateRenamedFoldersOnDisk(folderRes.data.path);
     return folderRes.data.path;
 }
 
