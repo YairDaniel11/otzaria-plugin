@@ -33,6 +33,12 @@ let expandedPaths  = new Set();
 let booted         = false;
 let currentManifest = [];
 let filterNewOnly  = false;
+
+// "שס וגשל" בתוך "תלמוד בבלי" הוא ~475MB מתוך ~612MB. מי שלא מוריד אותו
+// עדיין רוצה לדעת מה חדש ב"תלמוד בבלי" — לכן ההגדרה הזו מוציאה את התיקייה
+// מחישובי הסטטוס וההורדה של התיקייה שמעליה.
+const SHAS_PATH = 'תלמוד בבלי/שס וגשל';
+let ignoreShas  = false;
 let cachedHashes   = {};   // טעון פעם אחת ב-boot, מתעדכן ב-saveHash
 let dlDone = 0, dlTotal = 0;
 let cancelRequested = false;   // מסומן ע"י כפתור "עצור"; נבדק בין קבצים/ניסיונות (לא ניתן לבטל הורדת קובץ בודד תוך כדי, אין API לכך)
@@ -219,6 +225,7 @@ async function boot(payload) {
 
     cachedHashes = await getStoredHashes();
     await loadDestFolder();
+    await loadIgnoreShas();
 
     hideLoading();
     renderFullLibraryBtn();
@@ -279,10 +286,10 @@ function createNode(node, depth) {
     row.appendChild(toggle);
 
     // אייקון סטטוס — SVG מ-google/material-design-icons
-    if (node.hash) {
-        const stored = storedHashFor(node);
-        if (stored) {
-            const isOk = stored === node.hash;
+    if (node.hash && !isIgnored(node)) {
+        const status = itemStatus(node);
+        if (status !== 'none') {
+            const isOk = status === 'ok';
             const icon = makeSvgIcon(isOk ? MI_CHECK_CIRCLE : MI_SYNC, isOk ? '#22c55e' : '#f59e0b');
             icon.title = isOk ? 'מעודכן' : 'יש עדכון זמין';
             row.appendChild(icon);
@@ -438,10 +445,48 @@ function statusKey(item) {
 
 /// כל הפריטים שבתוך [item] (כולל הוא עצמו) שיש להם zip ו-hash.
 /// בזכות זה אפשר לדעת *מה* השתנה בתוך אוסף ולא רק *ש*הוא השתנה.
-function subtreeOf(item) {
+function subtreeOf(item, { respectIgnore = false } = {}) {
     const prefix = item.path + '/';
     return currentManifest.filter(
-        i => i.hash && i.zip && (i.path === item.path || i.path.startsWith(prefix)),
+        i => i.hash && i.zip
+            && (i.path === item.path || i.path.startsWith(prefix))
+            && !(respectIgnore && isIgnored(i)),
+    );
+}
+
+/// האם [item] הוא "שס וגשל" (או בתוכו) והמשתמש ביקש להתעלם ממנו.
+function isIgnored(item) {
+    return ignoreShas
+        && (item.path === SHAS_PATH || item.path.startsWith(SHAS_PATH + '/'));
+}
+
+/// האם [item] הוא תיקיית-אב של התיקייה המתעלמת (כלומר "תלמוד בבלי"). ה-hash
+/// וה-zip שלו כוללים את השס, ולכן אי אפשר להסתמך עליהם כשמתעלמים ממנו.
+function hasIgnoredInside(item) {
+    return ignoreShas && SHAS_PATH.startsWith(item.path + '/');
+}
+
+/// סטטוס יעיל של פריט: 'none' (לא הורד) | 'ok' | 'update'.
+/// פריט רגיל נקבע לפי ה-hash שלו; אב של תיקייה מתעלמת — לפי שאר תתי-הפריטים.
+function itemStatus(item) {
+    if (!hasIgnoredInside(item)) {
+        const stored = storedHashFor(item);
+        if (!stored) return 'none';
+        return stored === item.hash ? 'ok' : 'update';
+    }
+    const subs = subtreeOf(item, { respectIgnore: true }).filter(n => n.path !== item.path);
+    if (!subs.some(n => storedHashFor(n))) return 'none';
+    return subs.every(n => storedHashFor(n) === n.hash) ? 'ok' : 'update';
+}
+
+/// הפריטים המינימליים להורדה כדי לעדכן את [item]. לפריט רגיל — הוא עצמו;
+/// לאב של תיקייה מתעלמת — רק תתי-התיקיות שהשתנו (לא נוגעים בשס).
+function updateTargets(item) {
+    if (!hasIgnoredInside(item)) return [item];
+    const { added, updated } = changesInside(item);
+    const changed = [...added, ...updated];
+    return changed.filter(
+        n => !changed.some(o => o.path !== n.path && n.path.startsWith(o.path + '/')),
     );
 }
 
@@ -475,7 +520,7 @@ function storedHashFor(item) {
 /// מדלג על [item] עצמו — הוא הכותרת, לא פרט.
 function changesInside(item) {
     const added = [], updated = [];
-    for (const node of subtreeOf(item)) {
+    for (const node of subtreeOf(item, { respectIgnore: true })) {
         if (node.path === item.path) continue;
         const stored = storedHashFor(node);
         if (!stored) added.push(node);
@@ -484,15 +529,40 @@ function changesInside(item) {
     return { added, updated };
 }
 
+// ─── הגדרה: התעלמות משס וגשל ──────────────────────────────────────
+
+async function loadIgnoreShas() {
+    try {
+        const res = await Otzaria.call('storage.get', { key: 'ignore_shas' });
+        ignoreShas = res?.data === true;
+    } catch {
+        try { ignoreShas = localStorage.getItem('ignore_shas') === '1'; } catch { ignoreShas = false; }
+    }
+    const box = document.getElementById('ignore-shas');
+    if (box) box.checked = ignoreShas;
+}
+
+async function setIgnoreShas(value) {
+    ignoreShas = !!value;
+    try {
+        if (typeof Otzaria !== 'undefined') {
+            await Otzaria.call('storage.set', { key: 'ignore_shas', value: ignoreShas });
+        } else {
+            localStorage.setItem('ignore_shas', ignoreShas ? '1' : '0');
+        }
+    } catch {}
+    refreshTree();
+}
+
 // ─── סיכום סטטוס + רענון עץ ──────────────────────────────────────
 
 function renderSummary() {
     const roots = currentManifest.filter(i => i.depth === 0 && i.hash);
     let upToDate = 0, needsUpdate = 0, notDownloaded = 0;
     for (const item of roots) {
-        const stored = storedHashFor(item);
-        if (!stored) notDownloaded++;
-        else if (stored !== item.hash) needsUpdate++;
+        const status = itemStatus(item);
+        if (status === 'none') notDownloaded++;
+        else if (status === 'update') needsUpdate++;
         else upToDate++;
     }
 
@@ -559,8 +629,7 @@ async function toggleNewFilter() {
 function renderNewUpdatedList() {
     const results = currentManifest.filter(item => {
         if (!item.hash || item.depth !== 0) return false;
-        const stored = storedHashFor(item);
-        return !stored || stored !== item.hash;
+        return itemStatus(item) !== 'ok';
     });
 
     const container = document.getElementById('tree');
@@ -572,7 +641,7 @@ function renderNewUpdatedList() {
     }
 
     results.forEach(item => {
-        const isNew = !storedHashFor(item);
+        const isNew = itemStatus(item) === 'none';
 
         const badge = document.createElement('span');
         badge.style.cssText = `
@@ -767,6 +836,8 @@ async function reconcileAncestors(node) {
     while (path) {
         const anc = currentManifest.find(i => i.path === path);
         if (!anc) break;
+        // ה-hash של אב שמכיל תיקייה מתעלמת כולל אותה — לא רושמים אותו.
+        if (hasIgnoredInside(anc)) break;
         const { added, updated } = changesInside(anc);
         if (added.length || updated.length) break;
         if (anc.hash) cachedHashes[statusKey(anc)] = anc.hash;
@@ -1045,6 +1116,20 @@ async function downloadOneItem(node, destFolder) {
 async function downloadItemRecursive(node, destFolder) {
     if (cancelRequested) return { succeeded: 0, failed: [], cancelled: true };
 
+    // אב של תיקייה מתעלמת: ה-zip שלו כולל אותה, אז מורידים את הילדים בנפרד
+    // (בלי המתעלמת) ולא רושמים hash לאב.
+    if (hasIgnoredInside(node)) {
+        let succeeded = 0;
+        const failed  = [];
+        for (const child of currentManifest.filter(c => c.parent === node.path && !isIgnored(c))) {
+            const r = await downloadItemRecursive(child, destFolder);
+            succeeded += r.succeeded;
+            failed.push(...r.failed);
+            if (r.cancelled) return { succeeded, failed, cancelled: true };
+        }
+        return { succeeded, failed };
+    }
+
     const res = await downloadOneItem(node, destFolder);
     if (res.ok) return { succeeded: 1, failed: [] };
     if (res.cancelled) return { succeeded: 0, failed: [], cancelled: true };
@@ -1142,9 +1227,10 @@ async function startDownloadAll(btn) {
     if (!rootItems.length) return;
 
     // דלג על מה שכבר מעודכן
-    const pending = rootItems.filter(n => {
-        const stored = storedHashFor(n);
-        return !stored || stored !== n.hash;
+    const pending = rootItems.flatMap(n => {
+        const status = itemStatus(n);
+        if (status === 'ok') return [];
+        return status === 'none' ? [n] : updateTargets(n);
     });
 
     if (!pending.length) {
@@ -1204,11 +1290,9 @@ async function startDownloadUpdates(btn) {
     }
 
     // רק פריטים שהורדו כבר אבל ה-hash השתנה
-    const toUpdate = currentManifest.filter(item => {
-        if (item.depth !== 0 || !item.hash) return false;
-        const stored = storedHashFor(item);
-        return stored && stored !== item.hash;
-    });
+    const toUpdate = currentManifest
+        .filter(item => item.depth === 0 && item.hash && itemStatus(item) === 'update')
+        .flatMap(updateTargets);
 
     if (!toUpdate.length) {
         showSuccess('אין עדכונים להורדה');

@@ -277,6 +277,11 @@ svg.status-icon { flex-shrink: 0; display: block; }
 
 <div id="folder-bar" style="display:none;align-items:center;gap:8px;font-size:0.82rem;margin-bottom:12px;padding:8px 12px;background:var(--surface-container);border-radius:10px;"></div>
 
+<label id="ignore-shas-wrap" style="display:flex;align-items:center;gap:8px;font-size:0.82rem;margin-bottom:12px;cursor:pointer;">
+    <input type="checkbox" id="ignore-shas" onchange="setIgnoreShas(this.checked)">
+    <span>התעלם מ"שס וגשל" (בתוך תלמוד בבלי) — הצג חדשים ועדכונים ב"תלמוד בבלי" בלעדיו, ואל תוריד אותו</span>
+</label>
+
 <div id="error-msg"></div>
 
 <div id="search-wrap">
