@@ -347,6 +347,49 @@ body {
 .parallel-timer-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--color-outline); }
 .parallel-timer-row:last-child { border-bottom:none; }
 .pt-clock { font-size:1.05em; font-weight:700; color:var(--color-primary); font-variant-numeric:tabular-nums; min-width:78px; text-align:center; flex-shrink:0; }
+
+/* ── ANDROID / MOBILE ADAPTATION ── */
+html { -webkit-text-size-adjust: 100%; }
+body { height: 100vh; height: 100dvh; max-width: 100vw; }
+.bottom-nav { padding-bottom: env(safe-area-inset-bottom); }
+.screen-body, .screen-header { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+.dialog-box { max-height: 90vh; max-height: 90dvh; }
+.history-list, .chart-svg-wrap, .topic-chips-scroll, .plan-nav, .map-track-bar { -webkit-overflow-scrolling: touch; }
+.map-track-bar { overflow-x: auto; }
+.map-layout { position: relative; }
+.today-ref, .plan-tile-name, .topic-list-name, .settings-item-label { overflow-wrap: anywhere; }
+img, svg, canvas { max-width: 100%; }
+@media (max-width: 700px) {
+  .map-sidebar { position: absolute; top: 0; bottom: 0; right: 0; z-index: 50; width: min(260px, 80vw); box-shadow: 0 0 18px rgba(0,0,0,.25); }
+  .map-sidebar.collapsed { width: 0; box-shadow: none; }
+  .form-row { flex-wrap: wrap; }
+  .form-row .input-group { flex: 1 1 140px; min-width: 0; }
+  .stats-row { flex-wrap: wrap; }
+  .stat-box { flex: 1 1 90px; }
+  .timer-clock { font-size: 2.6em; }
+  .today-actions > button { flex: 1 1 auto; }
+}
+@media (min-width: 701px) and (max-width: 1200px) and (pointer: coarse) {
+  .tiles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+}
+@media (pointer: coarse) {
+  .btn-primary, .btn-secondary, .btn-danger, .segment-btn, .topic-chip, .plan-nav-btn, .map-track-btn, .timer-tab, .btn-map-setup, .map-toggle, .masechet-item, .settings-item.clickable { min-height: 44px; }
+  .nav-tab { min-height: 56px; }
+  .btn-icon { min-width: 44px; min-height: 44px; justify-content: center; }
+  .btn-timer-side { width: 48px; height: 48px; }
+  .input, select.input, textarea.input { min-height: 44px; font-size: 16px; }
+  .history-item, .chapter-row, .topic-list-item { min-height: 44px; }
+  .toggle-switch { min-width: 44px; }
+  .settings-item { min-height: 48px; }
+  .plan-tile:hover, .history-item:hover, .chapter-row:hover, .daf-btn:hover, .btn-timer-main:hover { transform: none; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  .timer-main-display { padding: 8px 16px 4px; }
+  .timer-clock { font-size: 2.2em; }
+  .nav-tab { min-height: 44px; flex-direction: row; gap: 6px; }
+  .dialog-box { padding: 16px; }
+}
 </style>
 </head>
 <body>
@@ -2211,6 +2254,7 @@ async function mapToggleItem(track,key){if(!mapData[track])return;mapData[track]
 async function mapBulkAction(status){const track=mapData.current_track,name=mapCurrentItem[track];if(!name)return;const db=getMapDB(track);let count=0;for(const s in db)if(db[s][name])count=db[s][name];const start=track==='shas'?2:1;mapData[track].progress=mapData[track].progress||{};for(let p=start;p<=count;p++){const key=`${name}_${p}`;if(status===0)delete mapData[track].progress[key];else mapData[track].progress[key]=status;}await saveMap();renderMap();}
 async function mapDeferDay(){const track=mapData.current_track;if(!mapData[track])return;mapData[track].defer_days=(mapData[track].defer_days||0)+1;await saveMap();renderMap();}
 function switchMapTrack(track){if(!mapData.active_tracks.includes(track)&&!isCustomTrack(track))return;mapData.current_track=track;renderMap();}
+if(window.matchMedia&&matchMedia('(max-width:700px)').matches){document.addEventListener('DOMContentLoaded',()=>document.getElementById('map-sidebar')?.classList.add('collapsed'));}
 function toggleMapSidebar(){document.getElementById('map-sidebar').classList.toggle('collapsed');}
 async function toggleMapGridView(){
   mapData.grid_view=mapData.grid_view==='list'?'circle':'list';
